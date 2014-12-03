@@ -1,0 +1,28 @@
+#ncg-t_sceneList {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+#ncg-t_sceneList li a {
+    display: block;
+    padding: 5px 7px;
+    margin-bottom: 1px;
+    background: #EEEEEE;
+    font-weight: bold;
+    transition: all 0.2s ease-in-out;
+}
+#ncg-t_sceneList li:first-child a {
+    border-radius: 5px 5px 0 0;
+}
+#ncg-t_sceneList li:last-child a {
+    border-radius: 0 0 5px 5px;
+}
+#ncg-t_sceneList li a:hover,
+#ncg-t_sceneList li.live a {
+    text-decoration: none;
+    color: #ffffff;
+    background-color: #008cba;
+}
+#ncg-t_sceneList li.live a {
+    border-right: 10px solid #43AC6A;
+}
