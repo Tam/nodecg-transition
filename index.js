@@ -151,13 +151,12 @@ module.exports = function(nodecg) {
 				if (updateType) {
 					switch (updateType) {
 						case "SwitchScenes":
-							//onSceneSwitched(res);
+							onSceneSwitched(res);
 							break;
 						case "ScenesChanged":
-							//onScenesChanged(res);
+							onScenesChanged(res);
 							break;
-						default:
-							console.log(logCodes['info'] + res);
+						default: return;
 					}
 				} else {
 					var id = res["message-id"];
@@ -249,7 +248,62 @@ module.exports = function(nodecg) {
 
 			// Successful connection & Auth
 			function initNCGT() {
-				log('GET THE SCENES!');
+				getScenesList();
+			}
+
+			// When the scenes are changed
+			function onScenesChanged() {
+				getScenesList();
+			}
+
+			// Get the scenes list
+			nodecg.listenFor('reloadScenes', getScenesList);
+
+			function getScenesList() {
+				var request = {};
+				request["request-type"] = "GetSceneList";
+
+				sendMessage(request, receiveScenes);
+			}
+
+			function receiveScenes(res) {
+				var status = res["status"];
+
+				if (status == "ok") {
+					var currentScene = res["current-scene"],
+						scenes = res["scenes"];
+
+					if (scenes) {
+						nodecg.sendMessage('scenesList', {
+							currentScene: currentScene,
+							scenes: scenes
+						});
+						log('Scenes updated');
+					}
+
+				} else {
+					log("Unable to fetch scenes list", 'warn');
+				}
+			}
+
+			// Update the current active scene
+			function onSceneSwitched(res) {
+				//log('Scenes Switched!');
+				nodecg.sendMessage('currentScene', {
+					name: res['scene-name']
+				});
+			}
+
+			// Switch the live scene
+			nodecg.listenFor('switchScene', switchScene);
+
+			function switchScene(data) {
+				var newSceneName = data.name,
+					request = {};
+
+				request["request-type"] = "SetCurrentScene";
+				request["scene-name"] = newSceneName;
+				sendMessage(request);
 			}
 
 		}
