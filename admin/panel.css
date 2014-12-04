@@ -30,3 +30,62 @@
 #ncg-t_sceneList li.live a {
     border-right: 10px solid #43AC6A;
 }
+
+.ncg-t_modal .video {
+	position: relative;
+	padding-bottom: 56.25%; /* 16:9 */
+	padding-top: 25px;
+	height: 0;
+}
+.ncg-t_modal .video video {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background-color: #000000;
+}
+
+#ncg-t_addFile {
+	position: relative;
+}
+#ncg-t_addFile .uploadingOverlay {
+	text-align: center;
+	position: absolute;
+	top: 0;
+	right: 0;
+	bottom: 0;
+	left: 0;
+	background: rgba(255,255,255,0.8);
+	z-index: 5;
+	cursor: wait;
+	font-weight: bold;
+	line-height: 34px;
+}
+#ncg-t_addFile .form-group {
+	padding-right: 27px;
+	position: relative;
+}
+#ncg-t_addFile .btn {
+	position: absolute;
+	top: 0;
+	right: 0;
+	height: 35px;
+	line-height: 26px;
+}
+
+#ncg-t_transitionResolution {
+	position: relative;
+}
+#ncg-t_transitionResolution .x {
+	position: absolute;
+	top: 0;
+	left: -1px;
+	right: 0;
+	bottom: 0;
+	text-align: center;
+	height: 29px;
+	line-height: 29px;
+	font-weight: bold;
+	color: #cccccc;
+}

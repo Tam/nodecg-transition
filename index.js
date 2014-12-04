@@ -81,10 +81,16 @@ module.exports = function(nodecg) {
 		app = express(),
 		sys = require('sys'),
 		fs = require('fs'),
+		Datastore = require('nedb'),
+		db = new Datastore({ filename: 'bundles/nodecg-transition/transitions.db', autoload: true }),
+		Q = require('q'),
 		squirrel = require('squirrel'),
 		settings = getSettings(fs);
 
-	squirrel(['websocket','cli-color','crypto-js'], function(err, ws, clc, CryptoJS) {
+	squirrel(['websocket','cli-color','crypto-js','connect-busboy'], function(err, ws, clc, CryptoJS, busboy) {
+
+		// For file uploading
+		app.use(busboy());
 
 		var W3CWebSocket = ws.w3cwebsocket;
 
@@ -106,6 +112,127 @@ module.exports = function(nodecg) {
 					console.log(logCodes.info + msg);
 			}
 		};
+
+		/**
+		 * Transitions
+		 */
+		// Unique transition name
+		db.ensureIndex({ fieldName: 'name', unique: true }, function (e) {});
+
+		// Get all transitions from db
+		function allTransitions() {
+			var def = Q.defer();
+
+			db.find({}, function (err, docs) {
+				if (err) {
+					def.reject(new Error(err));
+				} else {
+					def.resolve(docs);
+				}
+			});
+
+			return def.promise;
+		}
+
+		// Find a transition by its name
+		function findTransitionByName(name) {
+			var def = Q.defer();
+
+			db.findOne({ name: name }, function (err, doc) {
+				if (err || doc === null) {
+					def.reject(new Error(err));
+				} else {
+					def.resolve(doc);
+				}
+			});
+
+			return def.promise;
+		}
+
+		// Add a transition to the db
+		function updateTransition(transition) {
+			if (!transition) return;
+
+			var def = Q.refer();
+			db.update({ name: transition.name }, transition, { upsert: true }, function (err, numReplaced, upsert) {
+				if (err) {
+					def.reject(new Error(err));
+				} else {
+					def.resolve(numReplaced);
+
+					if (upsert) {
+						log('Added "' + transition.name + '" to the DB');
+					} else {
+						log('Updated "' + transition.name + '" in the DB');
+					}
+				}
+			});
+		}
+
+		// Remove transition from the db
+		function removeTransition(name) {
+			db.remove({ name: name }, {}, function (err, numRemoved) {
+				log('Transition "' + name + '" has been removed from the DB');
+			});
+		}
+
+		// Update transitions list
+		nodecg.listenFor('getTransitionsList', getTransitionsList);
+
+		function getTransitionsList() {
+			var transitionsList = allTransitions();
+
+			nodecg.sendMessage('transitionsList', {
+				transitions: transitionsList
+			});
+		}
+
+		// Video File Stuff
+		var videoFolder = 'bundles/nodecg-transition/video/';
+
+		// View video
+		app.use('/nodecg-transition/video', express.static(videoFolder));
+
+		// Upload video file
+		app.post('/nodecg-transition/upload', function(req, res) {
+			var fstream;
+
+			req.pipe(req.busboy);
+
+			req.busboy.on('file', function (fieldname, file, filename) {
+				log('Uploading: ' + filename);
+				fstream = fs.createWriteStream(videoFolder + filename);
+				file.pipe(fstream);
+				fstream.on('close', function() {
+					res.status(200).json({
+						status: 'success',
+						data: filename
+					});
+				});
+			});
+		});
+
+		// Remove video file
+		app.post('/nodecg-transition/remove', function(req, res) {
+			var filename = req.body.filename;
+			fs.unlink(videoFolder + filename, function(err) {
+				if (err) {
+					res.status(500).json({
+						status: 'error',
+						error: err
+					});
+				} else {
+					res.status(200).json({
+						status: 'success',
+						data: {}
+					});
+				}
+			});
+		});
+
+		/**
+		 * Scenes
+		 */
 
 		// OBS Remote
 		if (settings.OBSRemoteURL == '') {
