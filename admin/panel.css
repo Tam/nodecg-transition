@@ -1,3 +1,7 @@
+#nodecg-transition .radio:last-of-type {
+	margin-bottom: 0;
+}
+
 #ncg-t_sceneList {
     margin: 0;
     padding: 0;
