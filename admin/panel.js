@@ -9,11 +9,44 @@ Object.size = function(obj) {
 $(function () {
 
 	/**
+	 * Init
+	 */
+	var po = $('#panelOverlay'),
+		pot = po.find('.text');
+
+	// OBS connection check
+	nodecg.sendMessage('checkObsConnection');
+	nodecg.listenFor('obsConnectedAndAuthenticated', checkObsConnection);
+
+	pot.html('Waiting for OBS connection...');
+	po.removeClass('hidden');
+
+	var waitingForObs = setTimeout(function () {
+		checkObsConnection(false);
+	}, 10000);
+
+	function checkObsConnection(isConnectedAndAuthenticated) {
+		if (!isConnectedAndAuthenticated) {
+			pot.html('No connection to OBS<br><small>Please start OBS, then restart the server, then reload the dashboard!</small>');
+			po.removeClass('hidden');
+		} else {
+			clearTimeout(waitingForObs);
+			pot.html('Running Transition...');
+			po.addClass('hidden');
+		}
+	}
+
+	/**
 	 * Transitions
 	 */
 	// Get transitions from db
-	nodecg.sendMessage('getTransitionsList');
+	getTransitionList();
+	nodecg.listenFor('transitionDeleted', getTransitionList);
 	nodecg.listenFor('transitionsList', updateTransitionsList);
+
+	function getTransitionList() {
+		nodecg.sendMessage('getTransitionsList');
+	}
 
 	var transListElem = $('#ncg-t_transitionsList');
 
@@ -130,29 +163,12 @@ $(function () {
 	$(document).on('click', '#ncg-t_removeFile', function (e) {
 		e.preventDefault();
 
-		if (confirm('Are you sure? (Can\'t be undone)')) {
+		if (confirm('Are you sure? (Can\'t be undone, canceling without a video will break all the things)')) {
 
 			var filename = $('#ncg-t_transitionFileLocationSet').val();
 			filename = (filename == '' ? videoFilename : filename);
 
-			$.ajax({
-				url: '/nodecg-transition/remove',
-				type: 'POST',
-				data: {'filename': filename},
-				success: function (data, textStatus, jqXHR) {
-					if (typeof data.error === 'undefined') {
-						$('#ncg-t_addFile').find('input').val('');
-						$('#ncg-t_fileUpload').removeClass('hidden');
-						$('#ncg-t_fileUploaded').addClass('hidden');
-						videoPreview.attr('src', defaultVideo);
-					} else {
-						console.log('Errors!', data);
-					}
-				},
-				error: function (jqXHR, textStatus, errorThrown) {
-					console.log('Errors!', textStatus);
-				}
-			});
+			removeVideo(filename);
 
 		}
 	});
@@ -271,6 +287,42 @@ $(function () {
 		nodecg.sendMessage('changeActiveTransition', transition);
 	});
 
+	// Delete Transition
+	$(document).on('click', '#ncg-t_transitionModalRemoveButton', function (e) {
+		e.preventDefault();
+
+		if (confirm('Are you sure? (Can\'t be undone, video will be deleted)')) {
+			var id = $('#ncg-t_transitionId').val(),
+				video = $('#ncg-t_transitionFileLocationSet').val();
+			nodecg.sendMessage('deleteTransition', id);
+			removeVideo(video);
+			$('#ncg-t_transitionModal').modal('hide');
+		}
+
+		return false;
+	});
+
+	function removeVideo(filename) {
+		$.ajax({
+			url: '/nodecg-transition/remove',
+			type: 'POST',
+			data: {'filename': filename},
+			success: function (data, textStatus, jqXHR) {
+				if (typeof data.error === 'undefined') {
+					$('#ncg-t_addFile').find('input').val('');
+					$('#ncg-t_fileUpload').removeClass('hidden');
+					$('#ncg-t_fileUploaded').addClass('hidden');
+					videoPreview.attr('src', defaultVideo);
+				} else {
+					console.log('Errors!', data);
+				}
+			},
+			error: function (jqXHR, textStatus, errorThrown) {
+				console.log('Errors!', textStatus);
+			}
+		});
+	}
+
 	/**
 	 * Scenes
 	 */
@@ -312,12 +364,16 @@ $(function () {
 
 	    nodecg.sendMessage('playTransition');
 
+	    pot.html('Running Transition...');
+	    po.removeClass('hidden');
+
 	    setTimeout(function () {
 		    listElem.find('li').removeClass('live');
 		    $(this).parent().addClass('live');
 		    nodecg.sendMessage('switchScene', {
 			    name: newSceneName
 		    });
+		    po.addClass('hidden');
 	    }, sceneSwitchTime);
 
         return false;

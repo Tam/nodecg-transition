@@ -194,9 +194,11 @@ module.exports = function(nodecg) {
 		}
 
 		// Remove transition from the db
-		function removeTransition(name) {
-			db.remove({ name: name }, {}, function (err, numRemoved) {
-				log('Transition "' + name + '" has been removed from the DB');
+		nodecg.listenFor('deleteTransition', removeTransition);
+		function removeTransition(id) {
+			db.remove({ _id: id }, {}, function (err, numRemoved) {
+				log('Transition "' + id + '" has been removed from the DB');
+				nodecg.sendMessage('transitionDeleted');
 			});
 		}
 
@@ -276,8 +278,11 @@ module.exports = function(nodecg) {
 		 */
 
 		// OBS Remote
+		var obsConnectedAndAuthenticated = false;
+
 		if (settings.OBSRemoteURL == '') {
 			log('OBS Remote URL not set!', 'warn');
+			obsConnectedAndAuthenticated = false
 		} else {
 
 			// Connection Variables
@@ -343,11 +348,13 @@ module.exports = function(nodecg) {
 
 			function _onWSError(e) {
 				log("Connection Error", 'warn');
+				obsConnectedAndAuthenticated = false;
 				obsSocket.close();
 			}
 
 			function _onWSClose() {
 				log("Connection to OBS Remote has been closed");
+				obsConnectedAndAuthenticated = false;
 			}
 
 			// Message Handling
@@ -408,15 +415,23 @@ module.exports = function(nodecg) {
 			function authenticationResponse(res) {
 				if (res['status'] == "ok") {
 					log('Authentication Successful');
+					obsConnectedAndAuthenticated = true;
 					initNCGT();
 				} else {
 					// Auth Failed. This warning is caught by _onWSReceiveMessage's error status catching
 				}
 			}
 
+			nodecg.listenFor('checkObsConnection', initNCGT);
+
 			// Successful connection & Auth
 			function initNCGT() {
-				getScenesList();
+				if (obsConnectedAndAuthenticated) {
+					nodecg.sendMessage('obsConnectedAndAuthenticated', true);
+					getScenesList();
+				} else {
+					nodecg.sendMessage('obsConnectedAndAuthenticated', false);
+				}
 			}
 
 			// When the scenes are changed

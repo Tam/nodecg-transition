@@ -1,3 +1,35 @@
+.ncg-t_panelBody {
+	position: relative;
+}
+
+#panelOverlay {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	z-index: 10;
+	background: rgba(255,255,255,0.9);
+	display: flex;
+	justify-content: center;
+	text-align: center;
+	align-items: center;
+	align-content: center;
+	font-weight: bold;
+	cursor: default;
+
+	-webkit-touch-callout: none;
+	-webkit-user-select: none;
+	-khtml-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+}
+
+#panelOverlay .text {
+	display: inline-block;
+}
+
 #ncg-t_transitionsList .radio a {
 	display: none;
 	float: right;
