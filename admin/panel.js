@@ -163,7 +163,7 @@ $(function () {
 	$(document).on('click', '#ncg-t_removeFile', function (e) {
 		e.preventDefault();
 
-		if (confirm('Are you sure? (Can\'t be undone, canceling without a video will break all the things)')) {
+		if (confirm('Are you sure? (Can\'t be undone. Canceling the modal without a video will break all the things when updating a transition!)')) {
 
 			var filename = $('#ncg-t_transitionFileLocationSet').val();
 			filename = (filename == '' ? videoFilename : filename);
