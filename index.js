@@ -131,14 +131,26 @@ module.exports = function(nodecg) {
 				}
 			});
 
-			return def.promise;
+			return def.promise.then(getTransitionsList);
 		}
 
-		// Find a transition by its name
-		function findTransitionByName(name) {
+		// Update transitions list
+		nodecg.listenFor('getTransitionsList', getTransitionsList);
+
+		function getTransitionsList(transitions) {
+			if (!transitions) {
+				allTransitions();
+				return;
+			}
+
+			nodecg.sendMessage('transitionsList', transitions);
+		}
+
+		// Find a transition by its _id
+		function findTransitionById(id) {
 			var def = Q.defer();
 
-			db.findOne({ name: name }, function (err, doc) {
+			db.findOne({ _id: id }, function (err, doc) {
 				if (err || doc === null) {
 					def.reject(new Error(err));
 				} else {
@@ -146,19 +158,30 @@ module.exports = function(nodecg) {
 				}
 			});
 
-			return def.promise;
+			return def.promise.done(getTransitionById);
+		}
+
+		nodecg.listenFor('getTransitionsById', getTransitionById);
+
+		function getTransitionById(transition) {
+			if (typeof transition === 'string') {
+				findTransitionById(transition);
+				return;
+			}
+
+			nodecg.sendMessage('gotTransitionByName', transition);
 		}
 
 		// Add a transition to the db
 		function updateTransition(transition) {
 			if (!transition) return;
 
-			var def = Q.refer();
-			db.update({ name: transition.name }, transition, { upsert: true }, function (err, numReplaced, upsert) {
+			var def = Q.defer();
+			db.update({ _id: transition.id }, transition, { upsert: true }, function (err, numReplaced, upsert) {
 				if (err) {
 					def.reject(new Error(err));
 				} else {
-					def.resolve(numReplaced);
+					def.resolve(transition.id);
 
 					if (upsert) {
 						log('Added "' + transition.name + '" to the DB');
@@ -167,23 +190,13 @@ module.exports = function(nodecg) {
 					}
 				}
 			});
+			return def.promise;
 		}
 
 		// Remove transition from the db
 		function removeTransition(name) {
 			db.remove({ name: name }, {}, function (err, numRemoved) {
 				log('Transition "' + name + '" has been removed from the DB');
-			});
-		}
-
-		// Update transitions list
-		nodecg.listenFor('getTransitionsList', getTransitionsList);
-
-		function getTransitionsList() {
-			var transitionsList = allTransitions();
-
-			nodecg.sendMessage('transitionsList', {
-				transitions: transitionsList
 			});
 		}
 
@@ -228,6 +241,34 @@ module.exports = function(nodecg) {
 					});
 				}
 			});
+		});
+
+		// Add / Update Transition
+		app.post('/nodecg-transition/update', function (req, res) {
+			var b = req.body,
+				transition = {};
+			transition.id = b.transitionId;
+			transition.file = b.transitionFileLocation;
+			transition.name = b.transitionName.replace(/["'\\]/g, "");
+			transition.width = b.transitionWidth;
+			transition.height = b.transitionHeight;
+			transition.switchTime = b.transitionSceneSwitchTime;
+
+			savedTransition = updateTransition(transition);
+
+			if (savedTransition) {
+				res.status(200).json({
+					status: 'success',
+					data: {
+						transitionName: savedTransition
+					}
+				});
+			} else {
+				res.status(500).json({
+					status: 'error',
+					error: 'Error! Check server log!'
+				});
+			}
 		});
 
 		/**

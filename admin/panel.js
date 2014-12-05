@@ -18,15 +18,19 @@ $(function () {
 	var transListElem = $('#ncg-t_transitionsList');
 
 	function updateTransitionsList(data) {
-		var transitions = data.transitions,
+		var transitions = data,
 			transitionsCount = Object.size(transitions);
 
 		if (transitionsCount < 1) {
-			transListElem.html('<p class="text-muted"><strong><small>You haven\'t added any transitions yet!</small></strong></p>');
+			transListElem.append('<p class="text-muted"><strong><small>You haven\'t added any transitions yet!</small></strong></p>');
 		} else {
 
+			transListElem.html('<div class="radio"><label><input type="radio" name="ncg-t_transitionList" value="none" checked/>None</label></div>');
+
 			for (var i = 0; i < transitionsCount; i++) {
-				console.log('Name, Resolution, Duration, Scene Switch Time');
+				var transition = transitions[i];
+
+				transListElem.append('<div class="radio"><label><input type="radio" name="ncg-t_transitionList" value="'+ transition._id +'"/>' + transition.name + '</label><a href="#" data-id="'+ transition._id +'" data-file="'+ transition.file +'" data-name="'+ transition.name +'" data-width="'+ transition.width +'" data-height="'+ transition.height +'" data-switchTime="'+ transition.switchTime +'">Edit</a></div>');
 			}
 
 		}
@@ -35,20 +39,53 @@ $(function () {
 	// Transition Modal
 	var modalButton = $('#ncg-t_transitionModalButton'),
 		defaultVideo = 'http://v2v.cc/~j/theora_testsuite/320x240.ogg',
-		videoPreview = $('#ncg-t_videoPreview');
+		videoPreview = $('#ncg-t_videoPreview'),
+		videoFolder = '/nodecg-transition/video/',
+		videoFile,
+		videoFilename,
+		activeTransition = {
+			switchTime: 0
+		};
+
+	// Open modal & populate with edit data
+	$(document).on('click', '#ncg-t_transitionsList a', function (e) {
+		e.preventDefault();
+		var t = $(this);
+
+		videoFilename = t.attr('data-file');
+
+		$('#ncg-t_transitionId').val(t.attr('data-id'));
+		$('#ncg-t_fileUpload').addClass('hidden');
+		$('#ncg-t_fileUploaded').removeClass('hidden').find('input').val(videoFilename);
+		$('#ncg-t_transitionName').val(t.attr('data-name'));
+		$('#ncg-t_transitionWidth').val(t.attr('data-width'));
+		$('#ncg-t_transitionHeight').val(t.attr('data-height'));
+		$('#ncg-t_transitionSceneSwitchTime').val(t.attr('data-switchTime'));
+
+		videoPreview.attr('src', videoFolder + videoFilename);
+
+		$('#ncg-t_transitionModalLabel').text('Update Transition');
+		modalButton.val('Update Transition');
+
+		$('#ncg-t_transitionModalRemoveButton').removeClass('hidden');
+
+		$('#ncg-t_transitionModal').modal('show');
+		return false;
+	});
 
 	// Reset modal on close
 	$(document).on('hidden.bs.modal', '#ncg-t_transitionModal', function(e) {
 		$(this).find('input').val('');
-		$('#ncg-t_transitionAddModalButton').button('reset');
+		$('#ncg-t_transitionModalLabel').text('Add Transition');
+		modalButton.val('Add Transition');
+		$('#ncg-t_transitionModalRemoveButton').addClass('hidden');
+		$('#ncg-t_transitionForm').find('.has-error').removeClass('has-error');
+		$('#ncg-t_fileUpload').removeClass('hidden');
+		$('#ncg-t_fileUploaded').addClass('hidden');
 		videoPreview.attr('src', defaultVideo);
 	});
 
 	// Upload video file
-	var videoFile,
-		videoFilename,
-		videoFolder = '/nodecg-transition/video/';
-
 	$(document).on('change', '#ncg-t_transitionFileLocation', function (e) {
 		videoFile = e.target.files;
 	});
@@ -93,27 +130,31 @@ $(function () {
 	$(document).on('click', '#ncg-t_removeFile', function (e) {
 		e.preventDefault();
 
-		var filename = $('#ncg-t_transitionFileLocationSet').val();
-		filename = (filename=='' ? videoFilename : filename);
+		if (confirm('Are you sure? (Can\'t be undone)')) {
 
-		$.ajax({
-			url: '/nodecg-transition/remove',
-			type: 'POST',
-			data: {'filename':filename},
-			success: function(data, textStatus, jqXHR) {
-				if (typeof data.error === 'undefined') {
-					$('#ncg-t_addFile').find('input').val('');
-					$('#ncg-t_fileUpload').removeClass('hidden');
-					$('#ncg-t_fileUploaded').addClass('hidden');
-					videoPreview.attr('src', defaultVideo);
-				} else {
-					console.log('Errors!', data);
+			var filename = $('#ncg-t_transitionFileLocationSet').val();
+			filename = (filename == '' ? videoFilename : filename);
+
+			$.ajax({
+				url: '/nodecg-transition/remove',
+				type: 'POST',
+				data: {'filename': filename},
+				success: function (data, textStatus, jqXHR) {
+					if (typeof data.error === 'undefined') {
+						$('#ncg-t_addFile').find('input').val('');
+						$('#ncg-t_fileUpload').removeClass('hidden');
+						$('#ncg-t_fileUploaded').addClass('hidden');
+						videoPreview.attr('src', defaultVideo);
+					} else {
+						console.log('Errors!', data);
+					}
+				},
+				error: function (jqXHR, textStatus, errorThrown) {
+					console.log('Errors!', textStatus);
 				}
-			},
-			error: function(jqXHR, textStatus, errorThrown) {
-				console.log('Errors!', textStatus);
-			}
-		});
+			});
+
+		}
 	});
 
 	// Video preview current time
@@ -121,9 +162,113 @@ $(function () {
 		$('#ncg-t_transitionSceneSwitchTime').val(this.currentTime);
 	});
 
+	// Add transition
 	$(document).on('click', '#ncg-t_transitionModalButton', function (e) {
 		e.preventDefault();
-		//
+
+		if (validateTransitionForm()) {
+			var data = $('#ncg-t_transitionForm').serialize();
+
+			$.ajax({
+				url: '/nodecg-transition/update',
+				type: 'POST',
+				data: data,
+				success: function(data, textStatus, jqXHR) {
+					if (typeof data.error === 'undefined') {
+						nodecg.sendMessage('getTransitionsList');
+						$('#ncg-t_transitionModal').modal('hide');
+					} else {
+						console.log('Errors!', data);
+					}
+				},
+				error: function(jqXHR, textStatus, errorThrown) {
+					console.log('Errors!', textStatus);
+				}
+			});
+		}
+
+	});
+
+	// Validate Form
+	function validateTransitionForm() {
+		var formValid = true;
+
+		// Video File
+		if (!$('#ncg-t_transitionFileLocationSet').val()) {
+			$('#ncg-t_fileUpload').addClass('has-error');
+			$('#ncg-t_fileUploaded').addClass('has-error');
+			formValid = false;
+		} else {
+			$('#ncg-t_fileUpload').removeClass('has-error');
+			$('#ncg-t_fileUploaded').removeClass('has-error');
+		}
+
+		// Transition Name
+		var transitionName = $('#ncg-t_transitionName');
+		if (!transitionName.val()) {
+			transitionName.parent().addClass('has-error');
+			formValid = false;
+		} else {
+			transitionName.parent().removeClass('has-error');
+		}
+
+		// Video Resolution
+		// Width
+		var transitionWidth = $('#ncg-t_transitionWidth');
+		if (!transitionWidth.val() || transitionWidth.val() < 0) {
+			transitionWidth.parent().addClass('has-error');
+			formValid = false;
+		} else {
+			transitionWidth.parent().removeClass('has-error');
+		}
+		// Height
+		var transitionHeight = $('#ncg-t_transitionHeight');
+		if (!transitionHeight.val() || transitionWidth.val() < 0) {
+			transitionHeight.parent().addClass('has-error');
+			formValid = false;
+		} else {
+			transitionHeight.parent().removeClass('has-error');
+		}
+
+		// Scene Switch Time
+		var sceneSwitchTime = $('#ncg-t_transitionSceneSwitchTime');
+		if (!sceneSwitchTime.val() || sceneSwitchTime.val() < 0) {
+			sceneSwitchTime.parent().addClass('has-error');
+			formValid = false;
+		} else {
+			sceneSwitchTime.parent().removeClass('has-error');
+		}
+
+		return formValid;
+	}
+
+	// Update video on transition change
+	$(document).on('change', '#ncg-t_transitionsList input', function () {
+		var t = $(this).parent().parent().find('a'),
+			transition = {};
+
+		if (t.attr('data-id')) {
+
+			activeTransition = {
+				id: t.attr('data-id'),
+				file: t.attr('data-file'),
+				name: t.attr('data-name'),
+				width: t.attr('data-width'),
+				height: t.attr('data-height'),
+				switchTime: t.attr('data-switchTime')
+			};
+
+			transition.file = activeTransition.file;
+			transition.width = activeTransition.width;
+			transition.height = activeTransition.height;
+
+		} else {
+			activeTransition = {
+				switchTime: 0
+			};
+		}
+
+		nodecg.sendMessage('changeActiveTransition', transition);
 	});
 
 	/**
@@ -161,12 +306,20 @@ $(function () {
 
     $(document).on("click", "#ncg-t_sceneList a", function (e) {
         e.preventDefault();
-	    var newSceneName = $(this).attr('data-scene');
-        listElem.find('li').removeClass('live');
-        $(this).parent().addClass('live');
-	    nodecg.sendMessage('switchScene', {
-		    name: newSceneName
-	    });
+
+	    var newSceneName = $(this).attr('data-scene'),
+		    sceneSwitchTime = (activeTransition.switchTime * 1000).toFixed(0);
+
+	    nodecg.sendMessage('playTransition');
+
+	    setTimeout(function () {
+		    listElem.find('li').removeClass('live');
+		    $(this).parent().addClass('live');
+		    nodecg.sendMessage('switchScene', {
+			    name: newSceneName
+		    });
+	    }, sceneSwitchTime);
+
         return false;
     });
 

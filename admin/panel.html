@@ -7,12 +7,8 @@
 	    <div class="row">
 	        <div class="col-md-6">
 	            <p><strong>Transition Picker</strong></p>
-	            <div class="radio"><label>
-	                <input type="radio" name="ncg-t_transitionList" value="none" checked/>
-	                None
-	            </label></div>
 		        <div id="ncg-t_transitionsList">
-			        <!--Populated via jQuery-->
+			        <div class="radio"><label><input type="radio" name="ncg-t_transitionList" value="none" checked/>None</label></div>
 		        </div>
 		        <button type="button" class="btn btn-primary btn-sm" id="ncg-t_addTransition" data-toggle="modal" data-target="#ncg-t_transitionModal"><i class="fa fa-plus"></i> Add Transition</button>
 	        </div>
@@ -33,7 +29,9 @@
 				<h4 class="modal-title" id="ncg-t_transitionModalLabel">Add Transition</h4>
 			</div>
 			<div class="modal-body">
-				<form enctype="multipart/form-data">
+				<form enctype="multipart/form-data" id="ncg-t_transitionForm">
+					<input type="hidden" name="transitionId" id="ncg-t_transitionId" />
+
 					<div class="row">
 						<div class="col-md-8">
 							<div class="video">
@@ -47,7 +45,7 @@
 								<div id="ncg-t_addFile">
 									<div class="uploadingOverlay hidden">Uploading...</div>
 									<div class="form-group" id="ncg-t_fileUpload">
-										<input type="file" class="form-control" placeholder="transition_a.mp4" name="transitionFileLocation" id="ncg-t_transitionFileLocation" accept="video/mp4,video/webm,video/ogg"/>
+										<input type="file" class="form-control" placeholder="transition_a.mp4" id="ncg-t_transitionFileLocation" accept="video/mp4,video/webm,video/ogg"/>
 										<button class="btn btn-xs btn-success" id="ncg-t_uploadFile" title="Upload File"><i class="fa fa-plus"></i></button>
 									</div>
 									<div class="form-group hidden" id="ncg-t_fileUploaded">
@@ -93,7 +91,7 @@
 			<div class="modal-footer">
 				<button type="button" class="btn btn-danger btn-sm pull-left hidden" id="ncg-t_transitionModalRemoveButton">Delete Transition</button>
 				<button type="button" class="btn btn-default btn-sm" data-dismiss="modal">Cancel</button>
-				<button type="button" class="btn btn-primary btn-sm" id="ncg-t_transitionModalButton">Add Transition</button>
+				<input type="button" class="btn btn-primary btn-sm" id="ncg-t_transitionModalButton" value="Add Transition"/>
 			</div>
 		</div>
 	</div>

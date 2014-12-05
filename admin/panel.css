@@ -1,5 +1,9 @@
-#nodecg-transition .radio:last-of-type {
-	margin-bottom: 0;
+#ncg-t_transitionsList .radio a {
+	display: none;
+	float: right;
+}
+#ncg-t_transitionsList .radio:hover a {
+	display: inline-block;
 }
 
 #ncg-t_sceneList {
@@ -43,7 +47,7 @@
 	left: 0;
 	width: 100%;
 	height: 100%;
-	background-color: #000000;
+	background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUAQMAAAC3R49OAAAABGdBTUEAALGPC/xhBQAAAAZQTFRF8PDwAAAAfqfmLAAAAAJ0Uk5TzAAR3FV6AAAAFElEQVQI12NgsP/AQAz+f4CBGAwAJIIdTTn0+w0AAAAASUVORK5CYII=);
 }
 
 #ncg-t_addFile {
