@@ -3,6 +3,8 @@ NodeCG Transition
 
 A bundle for [NodeCG](https://github.com/nodecg/nodecg) that enables video transitions between scenes!
 
+### [Demo](https://www.youtube.com/watch?v=eckbASUOYEY)
+
 ### Dependencies
 Requires the [OBS Remote](http://www.obsremote.com/) plugin to be installed, and [CLR Browser Source Plugin](https://obsproject.com/forum/resources/clr-browser-source-plugin.22/) *(obviously)*.
 
