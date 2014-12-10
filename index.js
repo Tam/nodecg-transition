@@ -6,6 +6,18 @@ getSettings = function(fs) {
 	}
 };
 
+var guid = (function() {
+	function s4() {
+		return Math.floor((1 + Math.random()) * 0x10000)
+			.toString(16)
+			.substring(1);
+	}
+	return function() {
+		return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
+		s4() + '-' + s4() + s4() + s4();
+	};
+})();
+
 function utf8_encode(argString) {
 	//  discuss at: http://phpjs.org/functions/utf8_encode/
 	// original by: Webtoolkit.info (http://www.webtoolkit.info/)
@@ -116,9 +128,6 @@ module.exports = function(nodecg) {
 		/**
 		 * Transitions
 		 */
-		// Unique transition name
-		db.ensureIndex({ fieldName: 'name', unique: true }, function (e) {});
-
 		// Get all transitions from db
 		function allTransitions() {
 			var def = Q.defer();
@@ -177,6 +186,7 @@ module.exports = function(nodecg) {
 			if (!transition) return;
 
 			var def = Q.defer();
+			transition.id = transition.id || guid();
 			db.update({ _id: transition.id }, transition, { upsert: true }, function (err, numReplaced, upsert) {
 				if (err) {
 					def.reject(new Error(err));
