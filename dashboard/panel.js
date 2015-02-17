@@ -10,22 +10,32 @@ Object.size = function(obj) {
  * Init
  */
 var po = $('#panelOverlay'),
-	pot = po.find('.text');
+	pot = po.find('.text'),
+	waitingForObs;
 
 // OBS connection check
-nodecg.sendMessage('checkObsConnection');
+doCheckOBSConnection();
+
+$(document).on('click', '#doCheckOBSConnection', function () {
+	doCheckOBSConnection();
+});
+
+function doCheckOBSConnection() {
+	nodecg.sendMessage('checkObsConnection');
+
+	pot.html('Waiting for OBS connection...');
+	po.removeClass('hidden');
+
+	waitingForObs = setTimeout(function () {
+		checkObsConnection(false);
+	}, 10000);
+}
+
 nodecg.listenFor('obsConnectedAndAuthenticated', checkObsConnection);
-
-pot.html('Waiting for OBS connection...');
-po.removeClass('hidden');
-
-var waitingForObs = setTimeout(function () {
-	checkObsConnection(false);
-}, 10000);
 
 function checkObsConnection(isConnectedAndAuthenticated) {
 	if (!isConnectedAndAuthenticated) {
-		pot.html('No connection to OBS<br><small>Please start OBS, then restart the server, then reload the dashboard!</small>');
+		pot.html('No connection to OBS<br /><br/><button id="doCheckOBSConnection" class="btn btn-primary btn-sm">Check connection...</button>');
 		po.removeClass('hidden');
 	} else {
 		clearTimeout(waitingForObs);

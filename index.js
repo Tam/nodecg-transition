@@ -41,49 +41,58 @@ module.exports = function(nodecg) {
 	 */
 	app.use(busboy()); // For file uploading
 
-	nodecg.listenFor('checkObsConnection', checkOBSConnection);
+	connectToOBS();
+	var areWeEvenConnected = false;
 
-	obs.connect(settings.url + ":" + settings.port, settings.password);
+	function connectToOBS() {
+		obs.connect(settings.url + ":" + settings.port, settings.password);
+	}
 
-	obs.onConnectionOpened(function () {
+	obs.onConnectionOpened = function () {
 		nodecg.log.info("Connected to OBS");
-		successfullOBSConnection();
-	});
+		areWeEvenConnected = true;
+		checkOBSConnection();
+	};
 
-	obs.onConnectionClosed(function () {
+	obs.onConnectionClosed = function () {
 		nodecg.log.info("Connection to OBS has been closed");
+		areWeEvenConnected = false;
 		nodecg.sendMessage('obsConnectedAndAuthenticated', false);
-	});
+	};
 
-	obs.onConnectionFailed(function () {
+	obs.onConnectionFailed = function () {
 		nodecg.log.warn("Failed to connect to OBS");
+		areWeEvenConnected = false;
 		nodecg.sendMessage('obsConnectedAndAuthenticated', false);
-	});
+	};
 
-	obs.onAuthenticationSucceeded(function () {
+	obs.onAuthenticationSucceeded = function () {
 		nodecg.log.info("Successfully authenticated with OBS");
 		successfullOBSConnection();
-	});
+	};
 
-	obs.onAuthenticationFailed(function (attemptsRemaining) {
+	obs.onAuthenticationFailed = function (attemptsRemaining) {
 		nodecg.log.warn("Failed to authenticate with OBS, " + attemptsRemaining + " attempts remaining");
 		nodecg.sendMessage('obsConnectedAndAuthenticated', false);
 
 		if (attemptsRemaining > 0) obs.authenticate(settings.password);
-	});
+	};
 
-	checkOBSConnection();
+	nodecg.listenFor('checkObsConnection', checkOBSConnection);
 
 	function checkOBSConnection() {
-		nodecg.log.info("Check connection");
-
 		obs.isAuthRequired(function (authRequired) {
+			areWeEvenConnected = true;
 			if (authRequired) {
 				obs.authenticate(settings.password);
 			} else {
 				successfullOBSConnection();
 			}
 		});
+
+		if (!areWeEvenConnected) {
+			connectToOBS();
+		}
 	}
 
 	function successfullOBSConnection() {
@@ -267,21 +276,19 @@ module.exports = function(nodecg) {
 		});
 	}
 
-	obs.onScenesChanged(function (scenes) {
-		nodecg.log.info(scenes.toString());
+	obs.onScenesChanged = function (scenes) {
 		getScenesList();
-	});
+	};
 
 	// Update the current active scene
-	obs.onSceneSwitched(function (sceneName) {
-		nodecg.log.info(sceneName);
+	obs.onSceneSwitched = function (sceneName) {
 		nodecg.sendMessage('currentScene', {
 			name: sceneName
 		});
-	});
+	};
 
 	function switchScene(data) {
-		obs.setCurrentScene(dada.name);
+		obs.setCurrentScene(data.name);
 	}
 
 	// NodeCG Hooks

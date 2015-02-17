@@ -1,5 +1,7 @@
 .idea
 Thumbs.db
 transitions.db
-video/*
+video/**
 node_modules
+
+!.empty_directory

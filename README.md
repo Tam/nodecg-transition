@@ -1,8 +1,6 @@
 NodeCG Transition
 =================
 
-**Currently broken and being rewritten!**
-
 A bundle for [NodeCG](https://github.com/nodecg/nodecg) that enables video transitions between scenes!
 
 ### [Demo](https://www.youtube.com/watch?v=eckbASUOYEY)
@@ -20,4 +18,4 @@ Requires the [OBS Remote](http://www.obsremote.com/) plugin to be installed, and
 ### Issues / Bugs / Enhancements
 If you find a bug, have an issue, or have an idea for an enhancement or improvement [open an issue](https://github.com/Tamfoolery/nodecg-transition/issues).
 
-If shit is completely fucked (to use the technical term) poke [@Tamfoolery](https://twitter.com/home?status=Hey%20%40Tamfoolery,%20NodeCG%20Transition%20shit's%20fucked%20yo.)
+**If shit is completely fucked (technical term) poke [@Tamfoolery](https://twitter.com/home?status=Hey%20%40Tamfoolery,%20NodeCG%20Transition%20shit's%20fucked%20yo.)**
