@@ -1,4 +1,5 @@
 {
-	"OBSRemoteURL": "localhost",
-	"password": "admin"
+  "url": "localhost",
+  "port": 4444,
+  "password": "admin"
 }
