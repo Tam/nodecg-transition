@@ -41,6 +41,8 @@ module.exports = function(nodecg) {
 	 */
 	app.use(busboy()); // For file uploading
 
+	nodecg.listenFor('checkObsConnection', checkOBSConnection);
+
 	obs.connect(settings.url + ":" + settings.port, settings.password);
 
 	obs.onConnectionOpened(function () {
@@ -78,11 +80,8 @@ module.exports = function(nodecg) {
 		if (attemptsRemaining > 0) obs.authenticate(settings.password);
 	});
 
-	nodecg.listenFor('checkObsConnection', checkOBSConnection);
-
 	function checkOBSConnection() {
 		nodecg.log.info("Check connection");
-		nodecg.sendMessage('obsConnectedAndAuthenticated', true);
 	}
 
 	/**
@@ -264,11 +263,13 @@ module.exports = function(nodecg) {
 	}
 
 	obs.onScenesChanged(function (scenes) {
+		nodecg.log.info(scenes.toString());
 		getScenesList();
 	});
 
 	// Update the current active scene
 	obs.onSceneSwitched(function (sceneName) {
+		nodecg.log.info(sceneName);
 		nodecg.sendMessage('currentScene', {
 			name: sceneName
 		});
