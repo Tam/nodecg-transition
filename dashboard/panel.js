@@ -62,11 +62,12 @@ function updateTransitionsList(data) {
 	var transitions = data,
 		transitionsCount = Object.size(transitions);
 
+	transListElem.innerHTML = '';
+	transListElem.html('<div class="radio"><label><input type="radio" name="ncg-t_transitionList" value="none" checked/>None</label></div>');
+
 	if (transitionsCount < 1) {
 		transListElem.append('<p class="text-muted"><strong><small>You haven\'t added any transitions yet!</small></strong></p>');
 	} else {
-
-		transListElem.html('<div class="radio"><label><input type="radio" name="ncg-t_transitionList" value="none" checked/>None</label></div>');
 
 		for (var i = 0; i < transitionsCount; i++) {
 			var transition = transitions[i];
