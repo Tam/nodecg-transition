@@ -3,7 +3,7 @@ document.addEventListener('ncgReady', function () {
 	var video = document.getElementById('player'),
 		videoFolder = '/nodecg-transition/video/';
 
-	//video.style.display = 'none';
+	video.style.display = 'none';
 
 	nodecg.listenFor('changeActiveTransition', updatePlayer);
 	nodecg.listenFor('playTransition', playTransition);
@@ -23,8 +23,13 @@ document.addEventListener('ncgReady', function () {
 	}
 
 	function playTransition() {
+		video.style.display = 'block';
 		video.play();
 	}
+
+	video.addEventListener('ended', function () {
+		video.style.display = 'none';
+	});
 
 }, false);
 
