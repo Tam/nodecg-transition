@@ -47,7 +47,7 @@ module.exports = function(nodecg) {
 
 	obs.onConnectionOpened(function () {
 		nodecg.log.info("Connected to OBS");
-		nodecg.sendMessage('obsConnectedAndAuthenticated', true);
+		successfullOBSConnection();
 	});
 
 	obs.onConnectionClosed(function () {
@@ -60,17 +60,9 @@ module.exports = function(nodecg) {
 		nodecg.sendMessage('obsConnectedAndAuthenticated', false);
 	});
 
-	obs.isAuthRequired(function (authRequired) {
-		if (authRequired) {
-			obs.authenticate(settings.password);
-		} else {
-			nodecg.sendMessage('obsConnectedAndAuthenticated', true);
-		}
-	});
-
 	obs.onAuthenticationSucceeded(function () {
 		nodecg.log.info("Successfully authenticated with OBS");
-		nodecg.sendMessage('obsConnectedAndAuthenticated', true);
+		successfullOBSConnection();
 	});
 
 	obs.onAuthenticationFailed(function (attemptsRemaining) {
@@ -80,8 +72,23 @@ module.exports = function(nodecg) {
 		if (attemptsRemaining > 0) obs.authenticate(settings.password);
 	});
 
+	checkOBSConnection();
+
 	function checkOBSConnection() {
 		nodecg.log.info("Check connection");
+
+		obs.isAuthRequired(function (authRequired) {
+			if (authRequired) {
+				obs.authenticate(settings.password);
+			} else {
+				successfullOBSConnection();
+			}
+		});
+	}
+
+	function successfullOBSConnection() {
+		getScenesList();
+		nodecg.sendMessage('obsConnectedAndAuthenticated', true);
 	}
 
 	/**
@@ -247,8 +254,6 @@ module.exports = function(nodecg) {
 	/**
 	 * Scenes
 	 */
-	getScenesList();
-
 	function getScenesList() {
 		obs.getSceneList(function (currentScene, scenes) {
 
