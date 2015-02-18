@@ -1,5 +1,6 @@
-NodeCG Transition
-=================
+[![NodeCG Transition Logo](http://i.imgur.com/DQsAkRU.png)](https://github.com/Tamfoolery/nodecg-transition)
+
+## NodeCG Transition
 
 A bundle for [NodeCG](https://github.com/nodecg/nodecg) that enables video transitions between scenes!
 
