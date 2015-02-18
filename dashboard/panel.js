@@ -268,9 +268,9 @@ function validateTransitionForm() {
 }
 
 // Update video on transition change
+var newTransition = {};
 $(document).on('change', '#ncg-t_transitionsList input', function () {
-	var t = $(this).parent().parent().find('a'),
-		transition = {};
+	var t = $(this).parent().parent().find('a');
 
 	if (t.attr('data-id')) {
 
@@ -283,18 +283,28 @@ $(document).on('change', '#ncg-t_transitionsList input', function () {
 			switchTime: t.attr('data-switchTime')
 		};
 
-		transition.file = activeTransition.file;
-		transition.width = activeTransition.width;
-		transition.height = activeTransition.height;
+		newTransition.file = activeTransition.file;
+		newTransition.width = activeTransition.width;
+		newTransition.height = activeTransition.height;
 
 	} else {
+		newTransition = {};
+
 		activeTransition = {
 			switchTime: 0
 		};
 	}
 
-	nodecg.sendMessage('changeActiveTransition', transition);
+	updateViewTransition();
 });
+
+nodecg.listenFor('newTransitionView', function () {
+	updateViewTransition();
+});
+
+function updateViewTransition() {
+	nodecg.sendMessage('changeActiveTransition', newTransition);
+}
 
 // Delete Transition
 $(document).on('click', '#ncg-t_transitionModalRemoveButton', function (e) {

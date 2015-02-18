@@ -5,6 +5,8 @@ document.addEventListener('ncgReady', function () {
 
 	video.style.display = 'none';
 
+	nodecg.sendMessage('newTransitionView');
+
 	nodecg.listenFor('changeActiveTransition', updatePlayer);
 	nodecg.listenFor('playTransition', playTransition);
 
