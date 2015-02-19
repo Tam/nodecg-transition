@@ -295,5 +295,5 @@ module.exports = function(nodecg) {
 	nodecg.listenFor('reloadScenes', getScenesList);
 	nodecg.listenFor('switchScene', switchScene);
 
-	return app;
+	nodecg.mount(app);
 };

@@ -1,0 +1,14 @@
+{
+  "name": "nodecg-transition",
+  "version": "0.3.0",
+  "description": "A bundle that allows for video transitions between scenes",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tamfoolery/nodecg-transition.git"
+  },
+  "bugs": "https://github.com/tamfoolery/nodecg-transition/issues",
+  "license": "GPL",
+  "dependencies": {
+    "connect-busboy": "^0.0.2"
+  }
+}
