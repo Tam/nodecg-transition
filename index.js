@@ -1,40 +1,28 @@
-getSettings = function(fs) {
-	try {
-		return JSON.parse(fs.readFileSync('bundles/nodecg-transition/settings.json', 'utf8'));
-	} catch (e) {
-		return new Error(e);
-	}
-};
+'use strict';
 
-var guid = (function() {
-	function s4() {
-		return Math.floor((1 + Math.random()) * 0x10000)
-			.toString(16)
-			.substring(1);
-	}
-	return function() {
-		return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
-			s4() + '-' + s4() + s4() + s4();
-	};
-})();
+var express = require('express'),
+    fs = require('fs.extra'),
+    locallydb = require('locallydb'),
+    Q = require('q'),
+    busboy = require('connect-busboy'),
+    util = require('util'),
+    OBSRemote = require('obs-remote');
+
+var app = express(),
+    db = new locallydb('db/nodecg-transition').collection('transitions'),
+    obs = new OBSRemote();
+
+var VIDEO_FOLDER = 'bundles/nodecg-transition/view/video/';
+
+// Load settings, throw error if missing
+var settings = JSON.parse(fs.readFileSync('bundles/nodecg-transition/settings.json', 'utf8'));
 
 module.exports = function(nodecg) {
 
-	/**
-	 * Variables
-	 */
-	var express = require('express'),
-		sys = require('sys'),
-		fs = require('fs'),
-		Datastore = require('nedb'),
-		Q = require('q'),
-		busboy = require('connect-busboy'),
-		OBSRemote = require('obs-remote');
-
-	var app = express(),
-		db = new Datastore({ filename: 'bundles/nodecg-transition/transitions.db', autoload: true }),
-		obs = new OBSRemote(),
-		settings = getSettings(fs);
+    nodecg.declareSyncedVar({
+        name: 'obsConnectedAndAuthenticated',
+        initialVal: false
+    });
 
 	/**
 	 * Init
@@ -45,35 +33,35 @@ module.exports = function(nodecg) {
 	var areWeEvenConnected = false;
 
 	function connectToOBS() {
-		obs.connect(settings.url + ":" + settings.port, settings.password);
+		obs.connect(settings.url + ':' + settings.port, settings.password);
 	}
 
 	obs.onConnectionOpened = function () {
-		nodecg.log.info("Connected to OBS");
+		nodecg.log.info('Connected to OBS');
 		areWeEvenConnected = true;
 		checkOBSConnection();
 	};
 
 	obs.onConnectionClosed = function () {
-		nodecg.log.info("Connection to OBS has been closed");
+		nodecg.log.info('Connection to OBS has been closed');
 		areWeEvenConnected = false;
-		nodecg.sendMessage('obsConnectedAndAuthenticated', false);
+		nodecg.variables.obsConnectedAndAuthenticated = false;
 	};
 
 	obs.onConnectionFailed = function () {
-		nodecg.log.warn("Failed to connect to OBS");
+		nodecg.log.warn('Failed to connect to OBS');
 		areWeEvenConnected = false;
-		nodecg.sendMessage('obsConnectedAndAuthenticated', false);
+        nodecg.variables.obsConnectedAndAuthenticated = false;
 	};
 
 	obs.onAuthenticationSucceeded = function () {
-		nodecg.log.info("Successfully authenticated with OBS");
+		nodecg.log.info('Successfully authenticated with OBS');
 		successfullOBSConnection();
 	};
 
 	obs.onAuthenticationFailed = function (attemptsRemaining) {
-		nodecg.log.warn("Failed to authenticate with OBS, " + attemptsRemaining + " attempts remaining");
-		nodecg.sendMessage('obsConnectedAndAuthenticated', false);
+		nodecg.log.warn('Failed to authenticate with OBS, %d attempts remaining', attemptsRemaining);
+        nodecg.variables.obsConnectedAndAuthenticated = false;
 
 		if (attemptsRemaining > 0) obs.authenticate(settings.password);
 	};
@@ -97,103 +85,86 @@ module.exports = function(nodecg) {
 
 	function successfullOBSConnection() {
 		getScenesList();
-		nodecg.sendMessage('obsConnectedAndAuthenticated', true);
+        nodecg.variables.obsConnectedAndAuthenticated = true;
 	}
 
 	/**
 	 * Transitions
 	 */
-	// Get all transitions from db
-	function allTransitions() {
-		var def = Q.defer();
 
-		db.find({}, function (err, docs) {
-			if (err) {
-				def.reject(new Error(err));
-			} else {
-				def.resolve(docs);
-			}
-		});
+    nodecg.declareSyncedVar({
+        name: 'transitions',
+        initialVal: db.items.slice(0) // Use a clone
+    });
 
-		return def.promise.then(getTransitionsList);
-	}
+    nodecg.declareSyncedVar({
+        name: 'activeTransition',
+        initialVal: {
+            name: 'None',
+            switchTime: 0
+        }
+    });
 
-	// Update transitions list
-	function getTransitionsList(transitions) {
-		if (!transitions) {
-			allTransitions();
-			return;
-		}
+	nodecg.listenFor('deleteTransition', function(transition, cb) {
+        if (!transition || !transition.cid || !transition.filename) {
+            var err = new Error('Missing key data, not deleting transition');
+            nodecg.log.error(err);
+            cb(err);
+            return;
+        }
 
-		nodecg.sendMessage('transitionsList', transitions);
-	}
+        transition.cid = parseInt(transition.cid);
 
-	// Find a transition by its _id
-	function findTransitionById(id) {
-		var def = Q.defer();
+        try {
+            // Remove from DB
+            db.remove(transition.cid);
+            nodecg.variables.transitions = db.items.slice(0); // Use a clone
+        } catch (err) {
+            nodecg.log.error(err);
+            cb(err);
+            return;
+        }
 
-		db.findOne({ _id: id }, function (err, doc) {
-			if (err || doc === null) {
-				def.reject(new Error(err));
-			} else {
-				def.resolve(doc);
-			}
-		});
+        // Remove video file
+        var videoPath = VIDEO_FOLDER + transition.filename;
+        if (fs.existsSync(videoPath)) {
+            fs.unlink(VIDEO_FOLDER + transition.filename, function(err) {
+                if (err) {
+                    nodecg.log.error(err);
+                    cb(err);
+                } else {
+                    cb(null);
+                }
+            });
+        } else {
+            cb(null);
+        }
+    });
 
-		return def.promise.done(getTransitionById);
-	}
-
-	function getTransitionById(transition) {
-		if (typeof transition === 'string') {
-			findTransitionById(transition);
-			return;
-		}
-
-		nodecg.sendMessage('gotTransitionByName', transition);
-	}
-
-	// Add a transition to the db
-	function updateTransition(transition) {
-		if (!transition) return;
-
-		var def = Q.defer();
-		transition.id = transition.id || guid();
-		db.update({ _id: transition.id }, transition, { upsert: true }, function (err, numReplaced, upsert) {
-			if (err) {
-				def.reject(new Error(err));
-			} else {
-				def.resolve(transition.id);
-
-				if (upsert) {
-					nodecg.log.info('Added "' + transition.name + '" to the DB');
-				} else {
-					nodecg.log.info('Updated "' + transition.name + '" in the DB');
-				}
-			}
-		});
-		return def.promise;
-	}
-
-	// Remove transition from the db
-	function removeTransition(id) {
-		db.remove({ _id: id }, {}, function (err, numRemoved) {
-			nodecg.log.info('Transition "' + id + '" has been removed from the DB');
-			nodecg.sendMessage('transitionDeleted');
-		});
-	}
-
-	// NodeCG Hooks
-	nodecg.listenFor('getTransitionsList', getTransitionsList);
-	nodecg.listenFor('getTransitionsById', getTransitionById);
-	nodecg.listenFor('deleteTransition', removeTransition);
+    nodecg.listenFor('deleteVideo', function(filename, cb) {
+        fs.unlink(VIDEO_FOLDER + filename, function(err) {
+            if (err) {
+                nodecg.log.error(err);
+                cb(err);
+            } else {
+                // If there are any transitions for this, delete them
+                try {
+                    var transitions = db.where({ file: filename }).items;
+                    transitions.forEach(function(transition) {
+                        db.remove(parseInt(transition.cid));
+                    });
+                    nodecg.variables.transitions = db.items.slice(0); // Use a clone
+                } catch (err) {
+                    console.error(err);
+                }
+                cb(null);
+            }
+        });
+    });
 
 	/**
 	 * Video Files
 	 */
-	var videoFolder = 'bundles/nodecg-transition/video/';
-
-	// View video
-	app.use('/nodecg-transition/video', express.static(videoFolder));
 
 	// Upload video file
 	app.post('/nodecg-transition/upload', function(req, res) {
@@ -203,7 +174,7 @@ module.exports = function(nodecg) {
 
 		req.busboy.on('file', function (fieldname, file, filename) {
 			nodecg.log.info('Uploading: ' + filename);
-			fstream = fs.createWriteStream(videoFolder + filename);
+			fstream = fs.createWriteStream(VIDEO_FOLDER + filename);
 			file.pipe(fstream);
 			fstream.on('close', function() {
 				res.status(200).json({
@@ -214,65 +185,48 @@ module.exports = function(nodecg) {
 		});
 	});
 
-	// Remove video file
-	app.post('/nodecg-transition/remove', function(req, res) {
-		var filename = req.body.filename;
-		fs.unlink(videoFolder + filename, function(err) {
-			if (err) {
-				res.status(500).json({
-					status: 'error',
-					error: err
-				});
-			} else {
-				res.status(200).json({
-					status: 'success',
-					data: {}
-				});
-			}
-		});
-	});
+    nodecg.listenFor('upsertTransition', function(transition, cb) {
+        try {
+            // If we have CID already, we must be updating an existing entry
+            if (transition.cid) {
+                db.update(transition.cid, transition);
 
-	// Add / Update Transition
-	app.post('/nodecg-transition/update', function (req, res) {
-		var b = req.body,
-			transition = {};
-		transition.id = b.transitionId;
-		transition.file = b.transitionFileLocation;
-		transition.name = b.transitionName.replace(/["'\\]/g, "");
-		transition.width = b.transitionWidth;
-		transition.height = b.transitionHeight;
-		transition.switchTime = b.transitionSceneSwitchTime;
+                // If what we just edited is the current transition, re-assign it
+                if (transition.cid === nodecg.variables.activeTransition.cid) {
+                    // Because LocallyDB keeps everything in memory, we have to be very careful about object references
+                    // For this reason, we assign a clone.
+                    var activeTransition = db.where({ cid: parseInt(nodecg.variables.activeTransition.cid) }).items[0];
+                    if (activeTransition) {
+                        nodecg.variables.activeTransition = util._extend({}, activeTransition);
+                    }
+                }
 
-		var savedTransition = updateTransition(transition);
+                nodecg.log.info('Updated "' + transition.name + '" in the DB');
+            } else {
+                db.insert(transition);
+                nodecg.log.info('Added "' + transition.name + '" to the DB');
+            }
 
-		if (savedTransition) {
-			res.status(200).json({
-				status: 'success',
-				data: {
-					transitionName: savedTransition
-				}
-			});
-		} else {
-			res.status(500).json({
-				status: 'error',
-				error: 'Error! Check server log!'
-			});
-		}
-	});
+            nodecg.variables.transitions = db.items.slice(0); // Use a clone
+
+            cb(null);
+        } catch (err) {
+            nodecg.log.error(err);
+            cb(err);
+        }
+    });
 
 	/**
 	 * Scenes
 	 */
+    nodecg.declareSyncedVar({ name: 'scenes', initialVal: [] });
+    nodecg.declareSyncedVar({ name: 'currentScene', initialVal: '' });
+
 	function getScenesList() {
 		obs.getSceneList(function (currentScene, scenes) {
-
-			nodecg.sendMessage('scenesList', {
-				currentScene: currentScene,
-				scenes: scenes
-			});
-
+            nodecg.variables.currentScene = currentScene;
+            nodecg.variables.scenes = scenes;
 			nodecg.log.info('Scenes updated');
-
 		});
 	}
 
@@ -282,18 +236,14 @@ module.exports = function(nodecg) {
 
 	// Update the current active scene
 	obs.onSceneSwitched = function (sceneName) {
-		nodecg.sendMessage('currentScene', {
-			name: sceneName
-		});
+        nodecg.variables.currentScene = sceneName;
 	};
-
-	function switchScene(data) {
-		obs.setCurrentScene(data.name);
-	}
 
 	// NodeCG Hooks
 	nodecg.listenFor('reloadScenes', getScenesList);
-	nodecg.listenFor('switchScene', switchScene);
+	nodecg.listenFor('switchScene', function (sceneName) {
+        obs.setCurrentScene(sceneName);
+    });
 
 	nodecg.mount(app);
 };

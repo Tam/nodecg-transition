@@ -1,3 +1,16 @@
+.nodecg-transition .column {
+    width: 100%;
+    margin: 0 4px;
+}
+.nodecg-transition .column:first-of-type {
+    margin-right: 4px;
+    margin-left: 0;
+}
+.nodecg-transition .column:last-of-type {
+    margin-right: 0;
+    margin-left: 4px;
+}
+
 .ncg-t_panelBody {
 	position: relative;
 }
@@ -30,20 +43,12 @@
 	display: inline-block;
 }
 
-#ncg-t_transitionsList .radio a {
-	display: none;
-	float: right;
-}
-#ncg-t_transitionsList .radio:hover a {
-	display: inline-block;
-}
-
-#ncg-t_sceneList {
+.niceLookingList {
     margin: 0;
     padding: 0;
     list-style: none;
 }
-#ncg-t_sceneList li a {
+.niceLookingList li a {
     display: block;
     padding: 5px 7px;
     margin-bottom: 1px;
@@ -51,19 +56,22 @@
     font-weight: bold;
     transition: all 0.2s ease-in-out;
 }
-#ncg-t_sceneList li:first-child a {
+.niceLookingList li:first-child a {
     border-radius: 5px 5px 0 0;
 }
-#ncg-t_sceneList li:last-child a {
+.niceLookingList li:first-child:last-child a {
+    border-radius: 5px;
+}
+.niceLookingList li:last-child a {
     border-radius: 0 0 5px 5px;
 }
-#ncg-t_sceneList li a:hover,
-#ncg-t_sceneList li.live a {
+.niceLookingList li a:hover,
+.niceLookingList li.live a {
     text-decoration: none;
     color: #ffffff;
     background-color: #008cba;
 }
-#ncg-t_sceneList li.live a {
+.niceLookingList li.live a {
     border-right: 10px solid #43AC6A;
 }
 
@@ -124,4 +132,15 @@
 	line-height: 29px;
 	font-weight: bold;
 	color: #cccccc;
+}
+
+.transition a {
+    width: 100%;
+    border-top-right-radius: 0!important;
+    border-bottom-right-radius: 0!important;
+    cursor: pointer;
+}
+
+.transition-edit {
+    height: 31px;
 }

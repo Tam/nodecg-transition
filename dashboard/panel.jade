@@ -1,0 +1,83 @@
+// Templates
+li.transition(template="transition")
+    a
+        span.name
+    button.btn.btn-info.btn-xs.transition-edit Edit
+
+#panelOverlay.hidden
+    .text Running Transition...
+div(style="display: flex;")
+    .column
+        p #[strong Transition Picker]
+        ul#ncg-t_transitionsList.niceLookingList
+        button#ncg-t_addTransition.btn.btn-primary.btn-sm(type="button", data-toggle="modal", data-target="#ncg-t_transitionModal")
+            i.fa.fa-plus Add Transition
+    .column
+        p(style="font-weight: bold;") Scene Switcher
+        ul#ncg-t_sceneList.niceLookingList
+
+#ncg-t_transitionModal.modal.fade.ncg-t_modal(tabindex="-1", role="dialog", aria-labelledby="ncg-t_transitionModalLabel", aria-hidden="true")
+    .modal-dialog.modal-lg
+        .modal-content
+            .modal-header
+                button.close(type="button", data-dismiss="modal")
+                    span(aria-hidden="true") &#215;
+                    span.sr-only Cancel
+                h4#ncg-t_transitionModalLabel.modal-title Add Transition
+            .modal-body
+                form#ncg-t_transitionForm(enctype="multipart/form-data")
+                    input#ncg-t_transitionId(type="hidden", name="cid")
+                    .row
+                        .col-md-8
+                            .video
+                                video#ncg-t_videoPreview(src="http://v2v.cc/~j/theora_testsuite/320x240.ogg", controls="")
+                                    | Your browser does not support the <code>video</code> element. Get a better browser.
+                            p
+                            p.text-muted
+                                small
+                                    | OBS will still fade between scenes (it takes ~0.1s), so it"s recommended that you pick a scene switch time when there is as little movement on the screen as possible.
+                        .col-md-4
+                            p.text-muted
+                                small
+                                    strong File Location
+                            #ncg-t_addFile
+                                .uploadingOverlay.hidden Uploading...
+                                #ncg-t_fileUpload.form-group
+                                    input#ncg-t_transitionFileLocation.form-control(type="file", placeholder="transition_a.mp4", accept="video/mp4,video/webm,video/ogg")
+                                    button#ncg-t_uploadFile.btn.btn-xs.btn-success(title="Upload File")
+                                        i.fa.fa-plus
+                                #ncg-t_fileUploaded.form-group.hidden
+                                    input#ncg-t_transitionFileLocationSet.form-control(type="text", readonly="", placeholder="transition_a.mp4", name="file")
+                                    button#ncg-t_removeFile.btn.btn-xs.btn-danger(title="Remove File")
+                                        i.fa.fa-minus
+                            hr
+                            p.text-muted
+                                small
+                                    strong Name
+                            .form-group
+                                input#ncg-t_transitionName.form-control(type="text", placeholder="Transition A", name="name")
+                            hr
+                            p.text-muted
+                                small
+                                    strong Resolution
+                            #ncg-t_transitionResolution.row
+                                span.x x
+                                .col-md-6
+                                    .form-group
+                                        input#ncg-t_transitionWidth.form-control(type="text", placeholder="1920", name="width")
+                                .col-md-6
+                                    .form-group
+                                        input#ncg-t_transitionHeight.form-control(type="text", placeholder="1080", name="height")
+                            hr
+                            p.text-muted
+                                small
+                                    strong Scene Switch Time *
+                            .form-group
+                                input#ncg-t_transitionSceneSwitchTime.form-control(type="text", readonly="", placeholder="0", name="switchTime")
+                            p.text-muted
+                                small
+                                    | * Use the video preview to the left to select the time the scene switch should occur.
+            .modal-footer
+                button#ncg-t_transitionModalRemoveButton.btn.btn-danger.btn-sm.pull-left.hidden(type="button") Delete Transition
+                button.btn.btn-default.btn-sm(type="button", data-dismiss="modal") Cancel
+                input#ncg-t_transitionModalButton.btn.btn-primary.btn-sm(type="button", value="Add Transition")
