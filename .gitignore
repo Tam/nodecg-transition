@@ -1,7 +1,7 @@
 .idea
 Thumbs.db
-transitions.db
-video/**
+view/video/**
 node_modules
+bower_components
 
 !.empty_directory
