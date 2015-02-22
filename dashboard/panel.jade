@@ -10,8 +10,12 @@ div(style="display: flex;")
     .column
         p #[strong Transition Picker]
         ul#ncg-t_transitionsList.niceLookingList
-        button#ncg-t_addTransition.btn.btn-primary.btn-sm(type="button", data-toggle="modal", data-target="#ncg-t_transitionModal")
-            i.fa.fa-plus Add Transition
+        .btn-group.btn-group-justified(style="margin-top:8px;")
+            .btn-group
+                button#ncg-t_addTransition.btn.btn-info.btn-xs(type="button", data-toggle="modal", data-target="#ncg-t_transitionModal")
+                    i.fa.fa-plus
+                    | &nbsp;Add Transition
+
     .column
         p(style="font-weight: bold;") Scene Switcher
         ul#ncg-t_sceneList.niceLookingList

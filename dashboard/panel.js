@@ -333,7 +333,7 @@ nodecg.declareSyncedVar({
 $(document).on("click", "#ncg-t_sceneList a", function (e) {
     e.preventDefault();
 
-    var newSceneName = $(this).attr('data-scene'),
+    var newSceneName = $(this).data('scene'),
 	    sceneSwitchTime = (nodecg.variables.activeTransition.switchTime * 1000).toFixed(0);
 
     nodecg.sendMessage('playTransition');
