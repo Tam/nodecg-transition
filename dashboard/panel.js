@@ -1,11 +1,3 @@
-Object.size = function(obj) {
-	var size = 0, key;
-	for (key in obj) {
-		if (obj.hasOwnProperty(key)) size++;
-	}
-	return size;
-};
-
 /**
  * Init
  */
@@ -26,88 +18,80 @@ function doCheckOBSConnection() {
 	pot.html('Waiting for OBS connection...');
 	po.removeClass('hidden');
 
+    // TODO: This does nothing. Fix.
 	waitingForObs = setTimeout(function () {
 		checkObsConnection(false);
 	}, 10000);
 }
 
-nodecg.listenFor('obsConnectedAndAuthenticated', checkObsConnection);
-
-function checkObsConnection(isConnectedAndAuthenticated) {
-	if (!isConnectedAndAuthenticated) {
-		pot.html('No connection to OBS<br /><br/><button id="doCheckOBSConnection" class="btn btn-primary btn-sm">Check connection...</button>');
-		po.removeClass('hidden');
-	} else {
-		clearTimeout(waitingForObs);
-		pot.html('Running Transition...');
-		po.addClass('hidden');
-	}
-}
+nodecg.declareSyncedVar({
+    name: 'obsConnectedAndAuthenticated',
+    setter: function (isConnectedAndAuthenticated) {
+        if (isConnectedAndAuthenticated) {
+            clearTimeout(waitingForObs);
+            pot.html('Running Transition...');
+            po.addClass('hidden');
+        } else {
+            pot.html('<p>No connection to OBS</p><button id="doCheckOBSConnection" class="btn btn-primary btn-sm">Check connection...</button>');
+            po.removeClass('hidden');
+        }
+    }
+});
 
 /**
  * Transitions
  */
-// Get transitions from db
-getTransitionList();
-nodecg.listenFor('transitionDeleted', getTransitionList);
-nodecg.listenFor('transitionsList', updateTransitionsList);
+var $transList = $('#ncg-t_transitionsList');
 
-function getTransitionList() {
-	nodecg.sendMessage('getTransitionsList');
-}
+nodecg.declareSyncedVar({
+    name: 'transitions',
+    setter: function (transitions) {
+        $transList.html('');
+        transitions.unshift({
+            name: 'None',
+            switchTime: 0
+        });
 
-var transListElem = $('#ncg-t_transitionsList');
+        transitions.forEach(function(transition) {
+            // The $trans element will have a jQuery data property `transition` with all its data
+            var $trans = createTransitionListItem(transition);
+            $transList.append($trans);
+        });
 
-function updateTransitionsList(data) {
-	var transitions = data,
-		transitionsCount = Object.size(transitions);
-
-	transListElem.innerHTML = '';
-	transListElem.html('<div class="radio"><label><input type="radio" name="ncg-t_transitionList" value="none" checked/>None</label></div>');
-
-	if (transitionsCount < 1) {
-		transListElem.append('<p class="text-muted"><strong><small>You haven\'t added any transitions yet!</small></strong></p>');
-	} else {
-
-		for (var i = 0; i < transitionsCount; i++) {
-			var transition = transitions[i];
-
-			transListElem.append('<div class="radio"><label><input type="radio" name="ncg-t_transitionList" value="'+ transition._id +'"/>' + transition.name + '</label><a href="#" data-id="'+ transition._id +'" data-file="'+ transition.file +'" data-name="'+ transition.name +'" data-width="'+ transition.width +'" data-height="'+ transition.height +'" data-switchTime="'+ transition.switchTime +'">Edit</a></div>');
-		}
-
-	}
-}
+        // If there's only one, it must be the "None" transition we just pushed
+        if (transitions.length === 1) {
+            $transList.after('<p class="text-muted"><strong><small>You haven\'t added any transitions yet!</small></strong></p>');
+        }
+    }
+});
 
 // Transition Modal
-var modalButton = $('#ncg-t_transitionModalButton'),
-	defaultVideo = 'http://v2v.cc/~j/theora_testsuite/320x240.ogg',
-	videoPreview = $('#ncg-t_videoPreview'),
-	videoFolder = '/nodecg-transition/video/',
+var $modalButton = $('#ncg-t_transitionModalButton'),
+	DEFAULT_VIDEO = 'http://v2v.cc/~j/theora_testsuite/320x240.ogg',
+	$videoPreview = $('#ncg-t_videoPreview'),
+	VIDEO_FOLDER = '/view/nodecg-transition/video/',
 	videoFile,
-	videoFilename,
-	activeTransition = {
-		switchTime: 0
-	};
+	videoFilename;
 
 // Open modal & populate with edit data
-$(document).on('click', '#ncg-t_transitionsList a', function (e) {
+$(document).on('click', '.transition-edit', function (e) {
 	e.preventDefault();
-	var t = $(this);
+    var transition = $(this).parent().data('transition');
 
-	videoFilename = t.attr('data-file');
+	videoFilename = transition.file;
 
-	$('#ncg-t_transitionId').val(t.attr('data-id'));
+	$('#ncg-t_transitionId').val(transition.cid);
 	$('#ncg-t_fileUpload').addClass('hidden');
 	$('#ncg-t_fileUploaded').removeClass('hidden').find('input').val(videoFilename);
-	$('#ncg-t_transitionName').val(t.attr('data-name'));
-	$('#ncg-t_transitionWidth').val(t.attr('data-width'));
-	$('#ncg-t_transitionHeight').val(t.attr('data-height'));
-	$('#ncg-t_transitionSceneSwitchTime').val(t.attr('data-switchTime'));
+	$('#ncg-t_transitionName').val(transition.name);
+	$('#ncg-t_transitionWidth').val(transition.width);
+	$('#ncg-t_transitionHeight').val(transition.height);
+	$('#ncg-t_transitionSceneSwitchTime').val(transition.switchTime);
 
-	videoPreview.attr('src', videoFolder + videoFilename);
+	$videoPreview.attr('src', VIDEO_FOLDER + videoFilename);
 
 	$('#ncg-t_transitionModalLabel').text('Update Transition');
-	modalButton.val('Update Transition');
+	$modalButton.val('Update Transition');
 
 	$('#ncg-t_transitionModalRemoveButton').removeClass('hidden');
 
@@ -119,12 +103,12 @@ $(document).on('click', '#ncg-t_transitionsList a', function (e) {
 $(document).on('hidden.bs.modal', '#ncg-t_transitionModal', function(e) {
 	$(this).find('input').val('');
 	$('#ncg-t_transitionModalLabel').text('Add Transition');
-	modalButton.val('Add Transition');
+	$modalButton.val('Add Transition');
 	$('#ncg-t_transitionModalRemoveButton').addClass('hidden');
 	$('#ncg-t_transitionForm').find('.has-error').removeClass('has-error');
 	$('#ncg-t_fileUpload').removeClass('hidden');
 	$('#ncg-t_fileUploaded').addClass('hidden');
-	videoPreview.attr('src', defaultVideo);
+	$videoPreview.attr('src', DEFAULT_VIDEO);
 });
 
 // Upload video file
@@ -155,7 +139,7 @@ $(document).on('click', '#ncg-t_uploadFile', function (e) {
 					var filename = data.data;
 					$('#ncg-t_fileUpload').addClass('hidden');
 					$('#ncg-t_fileUploaded').removeClass('hidden').find('input').val(filename);
-					videoPreview.attr('src', videoFolder + filename);
+					$videoPreview.attr('src', VIDEO_FOLDER + filename);
 					videoFilename = filename;
 				} else {
 					console.log('Errors!', data);
@@ -172,18 +156,22 @@ $(document).on('click', '#ncg-t_uploadFile', function (e) {
 $(document).on('click', '#ncg-t_removeFile', function (e) {
 	e.preventDefault();
 
+    // TODO: This does nothing, removeVideo doesn't exist
 	if (confirm('Are you sure? (Can\'t be undone. Canceling the modal without a video will break all the things when updating a transition!)')) {
-
-		var filename = $('#ncg-t_transitionFileLocationSet').val();
-		filename = (filename == '' ? videoFilename : filename);
-
-		removeVideo(filename);
-
+		var filename = $('#ncg-t_transitionFileLocationSet').val() || videoFilename;
+        nodecg.sendMessage('deleteVideo', filename, function(err) {
+            if (err) {
+                console.error(err);
+            } else {
+                $('#ncg-t_fileUpload').removeClass('hidden').find('input').val();
+                $('#ncg-t_fileUploaded').addClass('hidden').find('input').val();
+            }
+        });
 	}
 });
 
 // Video preview current time
-videoPreview.on('timeupdate', function () {
+$videoPreview.on('timeupdate', function () {
 	$('#ncg-t_transitionSceneSwitchTime').val(this.currentTime);
 });
 
@@ -192,26 +180,19 @@ $(document).on('click', '#ncg-t_transitionModalButton', function (e) {
 	e.preventDefault();
 
 	if (validateTransitionForm()) {
-		var data = $('#ncg-t_transitionForm').serialize();
+        var data = {};
+        jQuery($('#ncg-t_transitionForm')).serializeArray().map(function(item) {
+            data[item.name] = item.value;
+        });
 
-		$.ajax({
-			url: '/nodecg-transition/update',
-			type: 'POST',
-			data: data,
-			success: function(data, textStatus, jqXHR) {
-				if (typeof data.error === 'undefined') {
-					nodecg.sendMessage('getTransitionsList');
-					$('#ncg-t_transitionModal').modal('hide');
-				} else {
-					console.log('Errors!', data);
-				}
-			},
-			error: function(jqXHR, textStatus, errorThrown) {
-				console.log('Errors!', textStatus);
-			}
-		});
+        nodecg.sendMessage('upsertTransition', data, function(err) {
+            if (err) {
+                console.error(err);
+            } else {
+                $('#ncg-t_transitionModal').modal('hide');
+            }
+        });
 	}
-
 });
 
 // Validate Form
@@ -267,119 +248,93 @@ function validateTransitionForm() {
 	return formValid;
 }
 
+nodecg.declareSyncedVar({
+    name: 'activeTransition',
+    initialVal: {
+        name: 'None',
+        switchTime: 0
+    },
+    setter: function(transition) {
+        var $lis = $transList.find('li');
+        $lis.removeClass('live');
+        $lis.each(function(index, el) {
+            var $el = $(el);
+            if ($el.data('transition').name === transition.name) {
+                console.log('okay we in there');
+                console.log($el);
+                $el.addClass('live');
+            }
+        });
+    }
+});
+
 // Update video on transition change
-var newTransition = {};
-$(document).on('change', '#ncg-t_transitionsList input', function () {
-	var t = $(this).parent().parent().find('a');
-
-	if (t.attr('data-id')) {
-
-		activeTransition = {
-			id: t.attr('data-id'),
-			file: t.attr('data-file'),
-			name: t.attr('data-name'),
-			width: t.attr('data-width'),
-			height: t.attr('data-height'),
-			switchTime: t.attr('data-switchTime')
-		};
-
-		newTransition.file = activeTransition.file;
-		newTransition.width = activeTransition.width;
-		newTransition.height = activeTransition.height;
-
-	} else {
-		newTransition = {};
-
-		activeTransition = {
-			switchTime: 0
-		};
-	}
-
-	updateViewTransition();
+$(document).on('click', '#ncg-t_transitionsList a', function (e) {
+    nodecg.variables.activeTransition = $(this).parent().data('transition');
+    e.preventDefault();
 });
-
-nodecg.listenFor('newTransitionView', function () {
-	updateViewTransition();
-});
-
-function updateViewTransition() {
-	nodecg.sendMessage('changeActiveTransition', newTransition);
-}
 
 // Delete Transition
 $(document).on('click', '#ncg-t_transitionModalRemoveButton', function (e) {
 	e.preventDefault();
 
 	if (confirm('Are you sure? (Can\'t be undone, video will be deleted)')) {
-		var id = $('#ncg-t_transitionId').val(),
-			video = $('#ncg-t_transitionFileLocationSet').val();
-		nodecg.sendMessage('deleteTransition', id);
-		removeVideo(video);
-		$('#ncg-t_transitionModal').modal('hide');
+        var data = {
+            cid: $('#ncg-t_transitionId').val(),
+            filename: $('#ncg-t_transitionFileLocationSet').val()
+        };
+
+        console.log(data.cid);
+
+		nodecg.sendMessage('deleteTransition', data, function(err) {
+            if (err) {
+                console.error(err);
+                return;
+            }
+            $('#ncg-t_transitionModal').modal('hide');
+        });
 	}
 
 	return false;
 });
 
-function removeVideo(filename) {
-	$.ajax({
-		url: '/nodecg-transition/remove',
-		type: 'POST',
-		data: {'filename': filename},
-		success: function (data, textStatus, jqXHR) {
-			if (typeof data.error === 'undefined') {
-				$('#ncg-t_addFile').find('input').val('');
-				$('#ncg-t_fileUpload').removeClass('hidden');
-				$('#ncg-t_fileUploaded').addClass('hidden');
-				videoPreview.attr('src', defaultVideo);
-			} else {
-				console.log('Errors!', data);
-			}
-		},
-		error: function (jqXHR, textStatus, errorThrown) {
-			console.log('Errors!', textStatus);
-		}
-	});
-}
-
 /**
  * Scenes
  */
-// Tell server to get scenes list on page load
-nodecg.sendMessage('reloadScenes');
-
-// Listen for scenes list
-nodecg.listenFor('scenesList', updateScenesList);
-nodecg.listenFor('currentScene', updateCurrentScene);
-
 // Scene List
 var listElem = $('#ncg-t_sceneList');
 
-function updateScenesList(data) {
-	var sceneList = "",
-		currentScene = data.currentScene,
-		scenes = data.scenes;
+// Tell server to get scenes list on page load
+nodecg.sendMessage('reloadScenes');
 
-	for (var i = 0; i < scenes.length; i++) {
-		var sceneName = scenes[i]['name'],
-			sceneClass = (sceneName !== currentScene ? '' : ' class="live"');
-		sceneList += '<li'+sceneClass+'><a href="#" data-scene="'+sceneName+'">'+sceneName+'</a></li>';
-	}
+nodecg.declareSyncedVar({
+    name: 'currentScene',
+    setter: function (currentScene) {
+        listElem.find('li').removeClass('live');
+        listElem.find('a[data-scene="' + currentScene + '"]').parent().addClass('live');
+    }
+});
 
-	listElem.html(sceneList);
-}
+nodecg.declareSyncedVar({
+    name: 'scenes',
+    setter: function (scenes) {
+        var sceneList = '';
 
-function updateCurrentScene(data) {
-	var currentScene = data.name;
-	listElem.find('li').removeClass('live');
-	listElem.find('a[data-scene="' + currentScene + '"]').parent().addClass('live');
-}
+        scenes.forEach(function(scene) {
+            var currentScene = nodecg.variables.currentScene;
+            var sceneClass = (scene.name === currentScene ? ' class="live"' : '');
+            sceneList += '<li'+sceneClass+'><a href="#" data-scene="'+scene.name+'">'+scene.name+'</a></li>';
+        });
+
+        listElem.html(sceneList);
+    }
+});
 
 $(document).on("click", "#ncg-t_sceneList a", function (e) {
     e.preventDefault();
 
-    var newSceneName = $(this).attr('data-scene'),
-	    sceneSwitchTime = (activeTransition.switchTime * 1000).toFixed(0);
+    var newSceneName = $(this).data('scene'),
+	    sceneSwitchTime = (nodecg.variables.activeTransition.switchTime * 1000).toFixed(0);
 
     nodecg.sendMessage('playTransition');
 
@@ -389,9 +344,7 @@ $(document).on("click", "#ncg-t_sceneList a", function (e) {
     setTimeout(function () {
 	    listElem.find('li').removeClass('live');
 	    $(this).parent().addClass('live');
-	    nodecg.sendMessage('switchScene', {
-		    name: newSceneName
-	    });
+	    nodecg.sendMessage('switchScene', newSceneName);
 	    po.addClass('hidden');
     }, sceneSwitchTime);
 
