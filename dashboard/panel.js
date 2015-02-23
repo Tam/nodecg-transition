@@ -2,8 +2,7 @@
  * Init
  */
 var po = $('#panelOverlay'),
-	pot = po.find('.text'),
-	waitingForObs;
+	pot = po.find('.text');
 
 // OBS connection check
 doCheckOBSConnection();
@@ -17,18 +16,12 @@ function doCheckOBSConnection() {
 
 	pot.html('Waiting for OBS connection...');
 	po.removeClass('hidden');
-
-    // TODO: This does nothing. Fix.
-	waitingForObs = setTimeout(function () {
-		checkObsConnection(false);
-	}, 10000);
 }
 
 nodecg.declareSyncedVar({
     name: 'obsConnectedAndAuthenticated',
     setter: function (isConnectedAndAuthenticated) {
         if (isConnectedAndAuthenticated) {
-            clearTimeout(waitingForObs);
             pot.html('Running Transition...');
             po.addClass('hidden');
         } else {
@@ -42,6 +35,15 @@ nodecg.declareSyncedVar({
  * Transitions
  */
 var $transList = $('#ncg-t_transitionsList');
+
+// Transition Modal
+var $modalButton = $('#ncg-t_transitionModalButton'),
+	$videoPreview = $('#ncg-t_videoPreview'),
+	$transitionModal = $('#ncg-t_transitionModal'),
+	DEFAULT_VIDEO = 'http://v2v.cc/~j/theora_testsuite/320x240.ogg',
+	VIDEO_FOLDER = '/view/nodecg-transition/video/',
+	videoFile,
+	videoFilename;
 
 nodecg.declareSyncedVar({
     name: 'transitions',
@@ -60,18 +62,12 @@ nodecg.declareSyncedVar({
 
         // If there's only one, it must be the "None" transition we just pushed
         if (transitions.length === 1) {
-            $transList.after('<p class="text-muted"><strong><small>You haven\'t added any transitions yet!</small></strong></p>');
+            $transList.after('<p id="ncg-t_noTransitions" class="text-muted"><strong><small>You haven\'t added any transitions yet!</small></strong></p>');
+        } else {
+	        $('#ncg-t_noTransitions').remove();
         }
     }
 });
-
-// Transition Modal
-var $modalButton = $('#ncg-t_transitionModalButton'),
-	DEFAULT_VIDEO = 'http://v2v.cc/~j/theora_testsuite/320x240.ogg',
-	$videoPreview = $('#ncg-t_videoPreview'),
-	VIDEO_FOLDER = '/view/nodecg-transition/video/',
-	videoFile,
-	videoFilename;
 
 // Open modal & populate with edit data
 $(document).on('click', '.transition-edit', function (e) {
@@ -95,7 +91,7 @@ $(document).on('click', '.transition-edit', function (e) {
 
 	$('#ncg-t_transitionModalRemoveButton').removeClass('hidden');
 
-	$('#ncg-t_transitionModal').modal('show');
+	$transitionModal.modal('show');
 	return false;
 });
 
@@ -142,11 +138,11 @@ $(document).on('click', '#ncg-t_uploadFile', function (e) {
 					$videoPreview.attr('src', VIDEO_FOLDER + filename);
 					videoFilename = filename;
 				} else {
-					console.log('Errors!', data);
+					console.log('[nodecg-transition] Errors!', data);
 				}
 			},
 			error: function(jqXHR, textStatus, errorThrown) {
-				console.log('Errors!', textStatus);
+				console.log('[nodecg-transition] Errors!', textStatus);
 			}
 		});
 	}
@@ -156,7 +152,6 @@ $(document).on('click', '#ncg-t_uploadFile', function (e) {
 $(document).on('click', '#ncg-t_removeFile', function (e) {
 	e.preventDefault();
 
-    // TODO: This does nothing, removeVideo doesn't exist
 	if (confirm('Are you sure? (Can\'t be undone. Canceling the modal without a video will break all the things when updating a transition!)')) {
 		var filename = $('#ncg-t_transitionFileLocationSet').val() || videoFilename;
         nodecg.sendMessage('deleteVideo', filename, function(err) {
@@ -175,7 +170,7 @@ $videoPreview.on('timeupdate', function () {
 	$('#ncg-t_transitionSceneSwitchTime').val(this.currentTime);
 });
 
-// Add transition
+// Add (or update) transition
 $(document).on('click', '#ncg-t_transitionModalButton', function (e) {
 	e.preventDefault();
 
@@ -189,7 +184,8 @@ $(document).on('click', '#ncg-t_transitionModalButton', function (e) {
             if (err) {
                 console.error(err);
             } else {
-                $('#ncg-t_transitionModal').modal('hide');
+	            console.log(data);
+	            $transitionModal.modal('hide');
             }
         });
 	}
@@ -260,8 +256,6 @@ nodecg.declareSyncedVar({
         $lis.each(function(index, el) {
             var $el = $(el);
             if ($el.data('transition').name === transition.name) {
-                console.log('okay we in there');
-                console.log($el);
                 $el.addClass('live');
             }
         });
@@ -284,14 +278,12 @@ $(document).on('click', '#ncg-t_transitionModalRemoveButton', function (e) {
             filename: $('#ncg-t_transitionFileLocationSet').val()
         };
 
-        console.log(data.cid);
-
 		nodecg.sendMessage('deleteTransition', data, function(err) {
             if (err) {
                 console.error(err);
                 return;
             }
-            $('#ncg-t_transitionModal').modal('hide');
+			$transitionModal.modal('hide');
         });
 	}
 

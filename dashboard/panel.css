@@ -74,6 +74,12 @@
 .niceLookingList li.live a {
     border-right: 10px solid #43AC6A;
 }
+.niceLookingList li .name {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	display: block;
+}
 
 .ncg-t_modal .video {
 	position: relative;

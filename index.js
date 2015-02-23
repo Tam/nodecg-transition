@@ -187,6 +187,7 @@ module.exports = function(nodecg) {
 
     nodecg.listenFor('upsertTransition', function(transition, cb) {
         try {
+	        // TODO: Transitions updating isn't. Fix!
             // If we have CID already, we must be updating an existing entry
             if (transition.cid) {
                 db.update(transition.cid, transition);
@@ -196,6 +197,7 @@ module.exports = function(nodecg) {
                     // Because LocallyDB keeps everything in memory, we have to be very careful about object references
                     // For this reason, we assign a clone.
                     var activeTransition = db.where({ cid: parseInt(nodecg.variables.activeTransition.cid) }).items[0];
+	                nodecg.log.info(activeTransition.name);
                     if (activeTransition) {
                         nodecg.variables.activeTransition = util._extend({}, activeTransition);
                     }
