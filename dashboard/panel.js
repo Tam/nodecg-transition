@@ -184,7 +184,6 @@ $(document).on('click', '#ncg-t_transitionModalButton', function (e) {
             if (err) {
                 console.error(err);
             } else {
-	            console.log(data);
 	            $transitionModal.modal('hide');
             }
         });

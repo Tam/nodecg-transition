@@ -19,6 +19,6 @@ function createTransitionListItem (transition) {
         trans.querySelector('.transition-edit').style.display = 'none';
     }
 
-    var $trans = $(trans).data('transition', transition);
+    var $trans = $(trans).attr('data-transition', JSON.stringify(transition));
     return $trans;
 }

@@ -1,6 +1,6 @@
 {
   "name": "nodecg-transition",
-  "version": "0.3.0",
+  "version": "0.4.2",
   "nodecgDependency": "~0.5.0",
   "description": "A bundle that allows for video transitions between scenes",
   "homepage": "https://github.com/Tamfoolery/nodecg-transition",
