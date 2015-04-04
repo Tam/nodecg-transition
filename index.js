@@ -187,7 +187,6 @@ module.exports = function(nodecg) {
 
     nodecg.listenFor('upsertTransition', function(transition, cb) {
         try {
-	        // TODO: Transitions updating isn't. Fix!
             // If we have CID already, we must be updating an existing entry
             if (transition.cid) {
                 db.update(parseInt(transition.cid), transition);
