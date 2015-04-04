@@ -3,7 +3,7 @@
 		"name": "nodeCgTransition",
 		"title": "Scene Transition",
 		"width": 4,
-		"file": "panel.html",
+		"file": "panel.jade",
 		"faIcon": "fa-exchange",
 		"viewUrl": "/view/nodecg-transition/index.html"
 	}
