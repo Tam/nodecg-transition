@@ -19,9 +19,9 @@ var settings = JSON.parse(fs.readFileSync('bundles/nodecg-transition/settings.js
 
 module.exports = function(nodecg) {
 
-    nodecg.declareSyncedVar({
-        name: 'obsConnectedAndAuthenticated',
-        initialVal: false
+    var obsConnectedAndAuthenticated = nodecg.Replicant('obsConnectedAndAuthenticated', {
+        defaultValue: false,
+	    persistent: false
     });
 
 	/**
@@ -45,13 +45,13 @@ module.exports = function(nodecg) {
 	obs.onConnectionClosed = function () {
 		nodecg.log.info('Connection to OBS has been closed');
 		areWeEvenConnected = false;
-		nodecg.variables.obsConnectedAndAuthenticated = false;
+		obsConnectedAndAuthenticated.value = false;
 	};
 
 	obs.onConnectionFailed = function () {
 		nodecg.log.warn('Failed to connect to OBS');
 		areWeEvenConnected = false;
-        nodecg.variables.obsConnectedAndAuthenticated = false;
+		obsConnectedAndAuthenticated.value = false;
 	};
 
 	obs.onAuthenticationSucceeded = function () {
@@ -61,7 +61,7 @@ module.exports = function(nodecg) {
 
 	obs.onAuthenticationFailed = function (attemptsRemaining) {
 		nodecg.log.warn('Failed to authenticate with OBS, %d attempts remaining', attemptsRemaining);
-        nodecg.variables.obsConnectedAndAuthenticated = false;
+		obsConnectedAndAuthenticated.value = false;
 
 		if (attemptsRemaining > 0) obs.authenticate(settings.password);
 	};
@@ -85,24 +85,24 @@ module.exports = function(nodecg) {
 
 	function successfullOBSConnection() {
 		getScenesList();
-        nodecg.variables.obsConnectedAndAuthenticated = true;
+		obsConnectedAndAuthenticated.value = true;
 	}
 
 	/**
 	 * Transitions
 	 */
 
-    nodecg.declareSyncedVar({
-        name: 'transitions',
-        initialVal: db.items.slice(0) // Use a clone
+    var transitions = nodecg.Replicant('transitions', {
+        defaultValue: db.items.slice(0), // Use a clone
+		persistent: false
     });
 
-    nodecg.declareSyncedVar({
-        name: 'activeTransition',
-        initialVal: {
+    var activeTransition = nodecg.Replicant('activeTransition', {
+	    defaultValue: {
             name: 'None',
             switchTime: 0
-        }
+        },
+	    persistent: false
     });
 
 	nodecg.listenFor('deleteTransition', function(transition, cb) {
@@ -118,7 +118,7 @@ module.exports = function(nodecg) {
         try {
             // Remove from DB
             db.remove(transition.cid);
-            nodecg.variables.transitions = db.items.slice(0); // Use a clone
+	        transitions.value = db.items.slice(0); // Use a clone
         } catch (err) {
             nodecg.log.error(err);
             cb(err);
@@ -149,13 +149,13 @@ module.exports = function(nodecg) {
             } else {
                 // If there are any transitions for this, delete them
                 try {
-                    var transitions = db.where({ file: filename }).items;
-                    transitions.forEach(function(transition) {
+                    var transitionItems = db.where({ file: filename }).items;
+                    transitionItems.forEach(function(transition) {
                         db.remove(parseInt(transition.cid));
                     });
-                    nodecg.variables.transitions = db.items.slice(0); // Use a clone
+	                transitions.value = db.items.slice(0); // Use a clone
                 } catch (err) {
-                    console.error(err);
+                    nodecg.log.error(err);
                 }
                 cb(null);
             }
@@ -192,12 +192,12 @@ module.exports = function(nodecg) {
                 db.update(parseInt(transition.cid), transition);
 
                 // If what we just edited is the current transition, re-assign it
-                if (parseInt(transition.cid) === parseInt(nodecg.variables.activeTransition.cid)) {
+                if (parseInt(transition.cid) === parseInt(activeTransition.value.cid)) {
                     // Because LocallyDB keeps everything in memory, we have to be very careful about object references
                     // For this reason, we assign a clone.
-                    var activeTransition = db.where({ cid: parseInt(nodecg.variables.activeTransition.cid) }).items[0];
-                    if (activeTransition) {
-                        nodecg.variables.activeTransition = util._extend({}, activeTransition);
+                    var newActiveTransition = db.where({ cid: parseInt(activeTransition.value.cid) }).items[0];
+                    if (newActiveTransition) {
+	                    activeTransition.value = util._extend({}, newActiveTransition);
                     }
                 }
 
@@ -207,7 +207,7 @@ module.exports = function(nodecg) {
                 nodecg.log.info('Added "' + transition.name + '" to the DB');
             }
 
-            nodecg.variables.transitions = db.items.slice(0); // Use a clone
+	        transitions.value = db.items.slice(0); // Use a clone
 
             cb(null);
         } catch (err) {
@@ -219,13 +219,13 @@ module.exports = function(nodecg) {
 	/**
 	 * Scenes
 	 */
-    nodecg.declareSyncedVar({ name: 'scenes', initialVal: [] });
-    nodecg.declareSyncedVar({ name: 'currentScene', initialVal: '' });
+    var scenes = nodecg.Replicant('scenes', { defaultValue: [], persistent: false });
+    var currentScene = nodecg.Replicant('currentScene', { defaultValue: '', persistent: false });
 
 	function getScenesList() {
-		obs.getSceneList(function (currentScene, scenes) {
-            nodecg.variables.currentScene = currentScene;
-            nodecg.variables.scenes = scenes;
+		obs.getSceneList(function (currentSceneName, scenesList) {
+			currentScene.value = currentSceneName;
+			scenes.value = scenesList;
 			nodecg.log.info('Scenes updated');
 		});
 	}
@@ -236,7 +236,7 @@ module.exports = function(nodecg) {
 
 	// Update the current active scene
 	obs.onSceneSwitched = function (sceneName) {
-        nodecg.variables.currentScene = sceneName;
+		currentScene.value = sceneName;
 	};
 
 	// NodeCG Hooks

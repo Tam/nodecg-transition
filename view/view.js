@@ -5,9 +5,8 @@ video.style.display = 'none';
 
 nodecg.listenFor('playTransition', playTransition);
 
-nodecg.declareSyncedVar({
-    name: 'activeTransition',
-    setter: function(transition) {
+nodecg.Replicant('activeTransition')
+    .on('change', function(oldVal, transition) {
         if (!transition.file) {
             video.width = 0;
             video.height = 0;
@@ -17,8 +16,7 @@ nodecg.declareSyncedVar({
             video.height = transition.height;
             video.src = videoFolder + transition.file;
         }
-    }
-});
+    });
 
 function playTransition() {
 	video.style.display = 'block';

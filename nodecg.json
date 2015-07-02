@@ -1,11 +1,11 @@
 {
   "name": "nodecg-transition",
-  "version": "0.4.2",
-  "nodecgDependency": "~0.5.0",
+  "version": "0.5.0",
+  "nodecgDependency": "~0.6.0",
   "description": "A bundle that allows for video transitions between scenes",
-  "homepage": "https://github.com/Tamfoolery/nodecg-transition",
+  "homepage": "https://github.com/tammcdonald/nodecg-transition",
   "authors": [
-    "Tamfoolery <tamfoolery@live.co.uk>"
+    "Tam McDonald <tammcdonald@live.co.uk>"
   ],
   "license": "GPL",
   "extension": {

@@ -18,18 +18,16 @@ function doCheckOBSConnection() {
 	po.removeClass('hidden');
 }
 
-nodecg.declareSyncedVar({
-    name: 'obsConnectedAndAuthenticated',
-    setter: function (isConnectedAndAuthenticated) {
-        if (isConnectedAndAuthenticated) {
-            pot.html('Running Transition...');
-            po.addClass('hidden');
-        } else {
-            pot.html('<p>No connection to OBS</p><button id="doCheckOBSConnection" class="btn btn-primary btn-sm">Check connection...</button>');
-            po.removeClass('hidden');
-        }
-    }
-});
+nodecg.Replicant('obsConnectedAndAuthenticated')
+	.on('change', function (oldVal, newVal) {
+		if (newVal) {
+			pot.html('Running Transition...');
+			po.addClass('hidden');
+		} else {
+			pot.html('<p>No connection to OBS</p><button id="doCheckOBSConnection" class="btn btn-primary btn-sm">Check connection...</button>');
+			po.removeClass('hidden');
+		}
+	});
 
 /**
  * Transitions
@@ -45,29 +43,34 @@ var $modalButton = $('#ncg-t_transitionModalButton'),
 	videoFile,
 	videoFilename;
 
-nodecg.declareSyncedVar({
-    name: 'transitions',
-    setter: function (transitions) {
+var reconnectProtect = false;
+nodecg.Replicant('transitions')
+	.on('change', function (oldVal, newVal) {
         $transList.html('');
-        transitions.unshift({
-            name: 'None',
-            switchTime: 0
-        });
+		var trans = newVal.slice(0);
+		if (trans.length === 0) {
+			trans.unshift({
+				name: 'None',
+				switchTime: 0
+			});
+		}
 
-        transitions.forEach(function(transition) {
+		trans.forEach(function(transition) {
             // The $trans element will have a jQuery data property `transition` with all its data
             var $trans = createTransitionListItem(transition);
             $transList.append($trans);
         });
 
         // If there's only one, it must be the "None" transition we just pushed
-        if (transitions.length === 1) {
-            $transList.after('<p id="ncg-t_noTransitions" class="text-muted"><strong><small>You haven\'t added any transitions yet!</small></strong></p>');
+        if (trans.length === 1) {
+	        if (!reconnectProtect) {
+		        $transList.after('<p id="ncg-t_noTransitions" class="text-muted"><strong><small>You haven\'t added any transitions yet!</small></strong></p>');
+		        reconnectProtect = true;
+	        }
         } else {
 	        $('#ncg-t_noTransitions').remove();
         }
-    }
-});
+	});
 
 // Open modal & populate with edit data
 $(document).on('click', '.transition-edit', function (e) {
@@ -243,27 +246,21 @@ function validateTransitionForm() {
 	return formValid;
 }
 
-nodecg.declareSyncedVar({
-    name: 'activeTransition',
-    initialVal: {
-        name: 'None',
-        switchTime: 0
-    },
-    setter: function(transition) {
+var activeTransition = nodecg.Replicant('activeTransition')
+	.on('change', function (oldVal, newVal) {
         var $lis = $transList.find('li');
         $lis.removeClass('live');
         $lis.each(function(index, el) {
             var $el = $(el);
-            if ($el.data('transition').name === transition.name) {
+            if ($el.data('transition').name === newVal.name) {
                 $el.addClass('live');
             }
         });
-    }
-});
+	});
 
 // Update video on transition change
 $(document).on('click', '#ncg-t_transitionsList a', function (e) {
-    nodecg.variables.activeTransition = $(this).parent().data('transition');
+    activeTransition.value = $(this).parent().data('transition');
     e.preventDefault();
 });
 
@@ -298,34 +295,29 @@ var listElem = $('#ncg-t_sceneList');
 // Tell server to get scenes list on page load
 nodecg.sendMessage('reloadScenes');
 
-nodecg.declareSyncedVar({
-    name: 'currentScene',
-    setter: function (currentScene) {
-        listElem.find('li').removeClass('live');
-        listElem.find('a[data-scene="' + currentScene + '"]').parent().addClass('live');
-    }
-});
-
-nodecg.declareSyncedVar({
-    name: 'scenes',
-    setter: function (scenes) {
+nodecg.Replicant('scenes')
+	.on('change', function(oldVal, newVal) {
         var sceneList = '';
 
-        scenes.forEach(function(scene) {
-            var currentScene = nodecg.variables.currentScene;
+		newVal.forEach(function(scene) {
             var sceneClass = (scene.name === currentScene ? ' class="live"' : '');
             sceneList += '<li'+sceneClass+'><a href="#" data-scene="'+scene.name+'">'+scene.name+'</a></li>';
         });
 
         listElem.html(sceneList);
-    }
-});
+	});
+
+var currentScene = nodecg.Replicant('currentScene')
+	.on('change', function(oldVal, newVal) {
+		listElem.find('li').removeClass('live');
+		listElem.find('a[data-scene="' + newVal + '"]').parent().addClass('live');
+	});
 
 $(document).on("click", "#ncg-t_sceneList a", function (e) {
     e.preventDefault();
 
     var newSceneName = $(this).data('scene'),
-	    sceneSwitchTime = (nodecg.variables.activeTransition.switchTime * 1000).toFixed(0);
+	    sceneSwitchTime = (activeTransition.value.switchTime * 1000).toFixed(0);
 
     nodecg.sendMessage('playTransition');
 
